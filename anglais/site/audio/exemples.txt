@@ -94,6 +94,7 @@ ex-sloth	Sloth is one of the seven deadly sins.
 ex-slothful	He became slothful after he retired.
 ex-soil	Tomatoes grow best in rich soil.
 ex-sore	I have a sore throat.
+ex-sorrow	A shadow of sorrow flitted across her face.
 ex-sour	This milk has gone sour.
 ex-statement	The minister made a statement to the press.
 ex-stay-put	Stay put, I'm coming to get you.
