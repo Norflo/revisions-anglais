@@ -11,6 +11,7 @@ ex-clumsy	Sorry, I'm so clumsy, I spilled my coffee.
 ex-content	The content of the report is confidential.
 ex-dashing	He looked dashing in his new suit.
 ex-dawdle	Don't dawdle, we're going to be late!
+ex-dazzling	His negotiations, far from ending in failure, achieved dazzling success.
 ex-dependable	She's a dependable colleague; you can count on her.
 ex-draft	I've written a first draft of the letter.
 ex-dusk	I like doing stretching exercises at dusk.
