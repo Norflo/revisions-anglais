@@ -13,6 +13,7 @@ ex-dashing	He looked dashing in his new suit.
 ex-dawdle	Don't dawdle, we're going to be late!
 ex-dependable	She's a dependable colleague; you can count on her.
 ex-draft	I've written a first draft of the letter.
+ex-dusk	I like doing stretching exercises at dusk.
 ex-engulf	The house was quickly engulfed in flames.
 ex-etch	That day is etched in my memory forever.
 ex-evenly	Spread the butter evenly on the bread.
