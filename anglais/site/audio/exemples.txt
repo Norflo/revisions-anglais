@@ -5,6 +5,7 @@ ex-actually	I thought it would be easy, but it's actually quite hard.
 ex-amidst	Amidst all the chaos, she stayed calm.
 ex-appoint	She was appointed head of the department.
 ex-back-down	He refused to back down during the argument.
+ex-batch	The last batch of cookies is still in the oven.
 ex-carefree	We spent a carefree summer by the sea.
 ex-clinch	They clinched the deal after hours of talks.
 ex-clumsy	Sorry, I'm so clumsy, I spilled my coffee.
