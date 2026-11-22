@@ -108,7 +108,7 @@
           <button class="del" data-a-del="${esc(a.en)}" aria-label="Supprimer">✕</button></div>`).join("")
         : `<div class="empty">Aucun mot ajouté ici pour l'instant.</div>`}
       ${mineList.length ? `<button class="btn ghost" data-a-share style="margin-top:12px">Envoyer la liste à Claude</button>
-        <div class="small" style="margin-top:8px">Pour les mettre aussi dans le tableau « Vocabulaire anglais » et l'appli Claude : envoie la liste dans une conversation avec Claude.</div>` : ""}
+        <div class="small" style="margin-top:8px">Pour les ajouter pour de bon (avec phrase d'exemple et son) : envoie la liste à Claude dans une session <b>Code</b> ouverte sur le dépôt revisions-anglais (pas dans une discussion normale).</div>` : ""}
     </section>`;
   }
 
@@ -179,7 +179,13 @@
   function share() {
     const lines = added.slice().sort((a, b) => a.en.localeCompare(b.en, "en", { sensitivity: "base" }))
       .map(a => `- ${a.en} : ${a.fr}${a.mine ? ` (ma traduction : ${a.mine})` : ""}${a.note ? ` — ${a.note}` : ""}`);
-    const text = "Ajoute ces mots à mon vocabulaire anglais (tableau et appli) :\n" + lines.join("\n");
+    // Le message dit à Claude où sont les mots : sinon il ne sait pas quel « tableau » ni quelle « appli ».
+    const text = "Ajoute ces mots à mon appli « Révisions d'anglais ». Tout est dans le dépôt GitHub Norflo/revisions-anglais (lis anglais/README.md) :\n"
+      + "- anglais/site/index.html : liste DATA [anglais, traduction, ma traduction, remarque], par ordre alphabétique (c'est l'onglet Tableau de l'appli) ;\n"
+      + "- anglais/site/exemples.json : une phrase d'exemple courante (le mot entre crochets) + sa traduction ;\n"
+      + "- anglais/site/frequences.json : fréquence d'usage (4 très courant … 1 rare).\n"
+      + "Les sons se font tout seuls. Enregistre et pousse sur main.\n\n"
+      + "Mots :\n" + lines.join("\n");
     try { AndroidApp.share(text); } catch (e) {}
   }
 
