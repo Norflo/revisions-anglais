@@ -200,6 +200,16 @@
     }
   });
 
+  // Page « Ajouter » : toucher l'écran ailleurs que sur une case, un bouton ou un mot à écouter
+  // met le curseur dans la case du mot anglais (à la fin du texte déjà tapé).
+  document.addEventListener("click", e => {
+    if (view !== "add") return;
+    if (e.target.closest("input, textarea, select, button, a, label, [data-speak], #tabs")) return;
+    const en = document.getElementById("a-en"); if (!en) return;
+    en.focus();
+    const n = en.value.length; try { en.setSelectionRange(n, n); } catch (err) {}
+  });
+
   // ---------- Enregistrement sur GitHub ----------
   // Avec une clé GitHub (collée une fois), chaque mot ajouté est écrit directement dans la liste
   // partagée (DATA de index.html). Le workflow « Révisions d'anglais - sons » ajoute ensuite tout
