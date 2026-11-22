@@ -2,7 +2,7 @@
 
 Appli Android de révision du vocabulaire anglais, rangée ici à part de Radar Alerte.
 
-- **Installer** : [RevisionsAnglais.apk](https://github.com/JamesRMaker/radar-alerte/releases/download/anglais/RevisionsAnglais.apk)
+- **Installer** : [RevisionsAnglais.apk](https://github.com/Norflo/revisions-anglais/releases/download/anglais/RevisionsAnglais.apk)
 - `site/` : la page (`index.html`, liste des mots dans `DATA`) et les sons (`audio/<mot>.mp3`).
   L'appli va chercher ces fichiers ici quand il y a Internet : un mot ajouté dans `site/`
   arrive dans l'appli sans réinstaller l'APK.

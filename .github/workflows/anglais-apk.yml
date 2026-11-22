@@ -1,7 +1,7 @@
 # Appli « Révisions d'anglais » (dossier anglais/) : fabrique l'APK et le publie dans la
 # release « anglais » (sans toucher aux versions de Radar Alerte).
 # Lien de téléchargement direct :
-#   https://github.com/JamesRMaker/radar-alerte/releases/download/anglais/RevisionsAnglais.apk
+#   https://github.com/Norflo/revisions-anglais/releases/download/anglais/RevisionsAnglais.apk
 name: Révisions d'anglais - APK
 
 on:
@@ -28,12 +28,12 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Clé de signature (mêmes secrets que Radar Alerte)
+      - name: Clé de signature (secrets ANGLAIS_KEYSTORE_B64 et ANGLAIS_KEYSTORE_PASSWORD)
         env:
-          KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
+          KEYSTORE_B64: ${{ secrets.ANGLAIS_KEYSTORE_B64 }}
         run: |
           if [ -z "$KEYSTORE_B64" ]; then
-            echo "::error::Secrets KEYSTORE_B64 et KEYSTORE_PASSWORD manquants."
+            echo "::error::Secrets ANGLAIS_KEYSTORE_B64 et ANGLAIS_KEYSTORE_PASSWORD manquants."
             exit 1
           fi
           echo "$KEYSTORE_B64" | tr -d ' \n\r' | base64 -d > "$RUNNER_TEMP/app.jks"
@@ -42,7 +42,7 @@ jobs:
       - name: Compilation de l'APK
         working-directory: anglais/android
         env:
-          APP_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          APP_KEYSTORE_PASSWORD: ${{ secrets.ANGLAIS_KEYSTORE_PASSWORD }}
         run: |
           chmod +x gradlew
           ./gradlew assembleRelease --stacktrace

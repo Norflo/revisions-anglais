@@ -21,7 +21,7 @@ android {
             create("app") {
                 storeFile = file(appKeystore)
                 storePassword = System.getenv("APP_KEYSTORE_PASSWORD")
-                keyAlias = "radaralerte"  // même clé que Radar Alerte (secrets du dépôt)
+                keyAlias = "revisionsanglais"  // clé propre à l'appli (secrets ANGLAIS_KEYSTORE_*)
                 keyPassword = System.getenv("APP_KEYSTORE_PASSWORD")
             }
         }

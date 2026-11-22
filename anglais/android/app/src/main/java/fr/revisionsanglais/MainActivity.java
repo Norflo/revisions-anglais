@@ -48,7 +48,7 @@ public class MainActivity extends Activity {
     static final String HOME = "https://" + HOST + "/index.html";
     /** Source en ligne des fichiers. */
     static final String REMOTE =
-        "https://raw.githubusercontent.com/JamesRMaker/radar-alerte/main/anglais/site/";
+        "https://raw.githubusercontent.com/Norflo/revisions-anglais/main/anglais/site/";
 
     private WebView web;
     private File cacheDir;
