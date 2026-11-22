@@ -108,6 +108,7 @@ ex-tail	The detective tailed the suspect for days.
 ex-throughout	It rained throughout the day.
 ex-tuck	Tuck your shirt in, please.
 ex-tuck-your-tail	When he saw the big dog, he tucked his tail and ran.
+ex-tusk	Poachers kill elephants for their tusks.
 ex-wage	The minimum wage went up this year.
 ex-wary	Be wary of strangers online.
 ex-wedge	Put a wedge under the door to keep it open.
