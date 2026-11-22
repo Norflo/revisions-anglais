@@ -100,6 +100,7 @@ ex-soil	Tomatoes grow best in rich soil.
 ex-sore	I have a sore throat.
 ex-sorrow	A shadow of sorrow flitted across her face.
 ex-sour	This milk has gone sour.
+ex-span	His attention span is that of a goldfish.
 ex-statement	The minister made a statement to the press.
 ex-stay-put	Stay put, I'm coming to get you.
 ex-steady	Hold the ladder steady, please.
