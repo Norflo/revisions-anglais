@@ -7,8 +7,14 @@ Appli Android de révision du vocabulaire anglais, rangée ici à part de Radar 
   L'appli va chercher ces fichiers ici quand il y a Internet : un mot ajouté dans `site/`
   arrive dans l'appli sans réinstaller l'APK.
 - `site/ajout.js` : onglet « + Ajouter » (seulement dans l'APK) : traduction en ligne (MyMemory),
-  voix du téléphone pour les nouveaux mots, mots gardés sur le téléphone, liste à envoyer à Claude.
+  voix du téléphone en attendant Ava. Avec une clé GitHub collée une fois dans l'onglet (fine-grained
+  token, dépôt revisions-anglais seulement, Contents : Read and write), chaque mot ajouté est écrit
+  directement dans `DATA` de `site/index.html` : pas besoin de passer par Claude.
   Ce fichier n'est pas dans l'appli Claude : ne pas le supprimer en recopiant `index.html`.
+- `tools/fill.py` : lancé par le workflow « Révisions d'anglais - sons » à chaque changement de
+  `index.html` : ajoute aux nouveaux mots une phrase d'exemple (Tatoeba, avec traduction) et leur
+  fréquence, puis `tools/make_audio.py` fabrique les sons Ava. Les valeurs existantes ne sont jamais
+  modifiées : on peut corriger une phrase ou une fréquence à la main.
 - `site/exemples.json` : une phrase d'exemple courante par mot (le mot entre crochets) + sa traduction,
   pour l'exercice « En contexte » (APK). Les phrases sont lues par la voix Ava (`audio/ex-<mot>.mp3`).
 - `site/frequences.json` : fréquence d'usage de chaque mot en anglais (4 très courant, 3 courant,

@@ -1,5 +1,6 @@
-# Appli « Révisions d'anglais » : fabrique les sons de prononciation manquants
-# (voix choisie dans anglais/tools/voice.txt ; si elle change, tous les sons sont refaits).
+# Appli « Révisions d'anglais » : complète les mots ajoutés (depuis l'appli ou à la main) :
+# phrase d'exemple (Tatoeba) et fréquence (anglais/tools/fill.py), puis sons de prononciation
+# manquants (voix choisie dans anglais/tools/voice.txt ; si elle change, tous les sons sont refaits).
 name: Révisions d'anglais - sons
 
 on:
@@ -24,7 +25,10 @@ jobs:
       - name: Outils
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg >/dev/null
-          pip install -q edge-tts
+          pip install -q edge-tts wordfreq
+
+      - name: Phrases d'exemple et fréquences des nouveaux mots
+        run: python3 anglais/tools/fill.py anglais/site
 
       - name: Fabrication des sons
         run: python3 anglais/tools/make_audio.py anglais/site
@@ -33,8 +37,8 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
-          git add anglais/site/audio
-          if git diff --cached --quiet; then echo "Aucun nouveau son."; exit 0; fi
-          git commit -m "Anglais : sons de prononciation"
+          git add anglais/site/audio anglais/site/exemples.json anglais/site/frequences.json
+          if git diff --cached --quiet; then echo "Rien de nouveau."; exit 0; fi
+          git commit -m "Anglais : phrases d'exemple, fréquences et sons des nouveaux mots"
           for i in 1 2 3; do git pull --rebase -q && git push && exit 0; sleep 5; done
           exit 1

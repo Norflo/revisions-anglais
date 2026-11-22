@@ -16,7 +16,7 @@
   try { personal = localStorage.getItem(PKEY) === "1"; } catch (e) {}
   const SHARED = W.slice();   // mots de la liste partagée (DATA), gardés pour pouvoir les remettre
 
-  // Mots déjà arrivés par Claude (dans DATA) : la copie du téléphone n'est plus utile.
+  // Mots déjà arrivés dans la liste partagée (DATA) : la copie du téléphone n'est plus utile.
   const official = new Set(personal ? [] : DATA.map(d => key(d[0])));
   const before = added.length;
   added = added.filter(a => {
@@ -104,12 +104,12 @@
     </section>
     <section class="panel">
       <div class="label" style="margin-top:0">Ajoutés sur le téléphone (${added.length})</div>
-      ${mineList.length ? mineList.map(a => `<div class="row"><div class="t"><b class="say" data-speak="${esc(a.en)}">${esc(a.en)}</b><div class="fr">${esc(a.fr)}</div>${a.mine ? `<div class="mn">Ta traduction : <em>${esc(a.mine)}</em></div>` : ""}</div>
+      ${mineList.length ? mineList.map(a => `<div class="row"><div class="t"><b class="say" data-speak="${esc(a.en)}">${esc(a.en)}</b>${a.gh ? `<span class="loc">✓ GitHub</span>` : ""}<div class="fr">${esc(a.fr)}</div>${a.mine ? `<div class="mn">Ta traduction : <em>${esc(a.mine)}</em></div>` : ""}</div>
           <button class="del" data-a-del="${esc(a.en)}" aria-label="Supprimer">✕</button></div>`).join("")
         : `<div class="empty">Aucun mot ajouté ici pour l'instant.</div>`}
-      ${mineList.length ? `<button class="btn ghost" data-a-share style="margin-top:12px">Envoyer la liste à Claude</button>
-        <div class="small" style="margin-top:8px">Pour les ajouter pour de bon (avec phrase d'exemple et son) : envoie la liste à Claude dans une session <b>Code</b> ouverte sur le dépôt revisions-anglais (pas dans une discussion normale).</div>` : ""}
-    </section>`;
+      ${token && pending().length ? `<button class="btn ghost" data-g-sync style="margin-top:12px" ${G.busy ? "disabled" : ""}>${G.busy ? "Envoi…" : "Envoyer sur GitHub"}</button>` : ""}
+    </section>
+    ${renderGitHub()}`;
   }
 
   function voiceLine() {
@@ -174,20 +174,9 @@
     S = null; rebuild();
     Object.assign(F, { en: "", fr: "", mine: "", note: "", alts: [], msg: `« ${word} » ajouté à tes mots.`, ok: true });
     render();
+    sync(false);
   }
 
-  function share() {
-    const lines = added.slice().sort((a, b) => a.en.localeCompare(b.en, "en", { sensitivity: "base" }))
-      .map(a => `- ${a.en} : ${a.fr}${a.mine ? ` (ma traduction : ${a.mine})` : ""}${a.note ? ` — ${a.note}` : ""}`);
-    // Le message dit à Claude où sont les mots : sinon il ne sait pas quel « tableau » ni quelle « appli ».
-    const text = "Ajoute ces mots à mon appli « Révisions d'anglais ». Tout est dans le dépôt GitHub Norflo/revisions-anglais (lis anglais/README.md) :\n"
-      + "- anglais/site/index.html : liste DATA [anglais, traduction, ma traduction, remarque], par ordre alphabétique (c'est l'onglet Tableau de l'appli) ;\n"
-      + "- anglais/site/exemples.json : une phrase d'exemple courante (le mot entre crochets) + sa traduction ;\n"
-      + "- anglais/site/frequences.json : fréquence d'usage (4 très courant … 1 rare).\n"
-      + "Les sons se font tout seuls. Enregistre et pousse sur main.\n\n"
-      + "Mots :\n" + lines.join("\n");
-    try { AndroidApp.share(text); } catch (e) {}
-  }
 
   $app.addEventListener("submit", e => {
     if (e.target.id !== "trform") return;
@@ -199,7 +188,10 @@
     if (t.dataset.alt !== undefined) { readForm(); F.fr = F.alts[+t.dataset.alt]; render(); return; }
     if (t.dataset.aListen !== undefined) { readForm(); if (F.en.trim()) AndroidApp.speak(F.en.trim()); return; }
     if (t.dataset.aSave !== undefined) { save(); return; }
-    if (t.dataset.aShare !== undefined) { share(); return; }
+    if (t.dataset.gSync !== undefined) { sync(false); return; }
+    if (t.dataset.gEdit !== undefined) { G.edit = true; G.msg = ""; render(); return; }
+    if (t.dataset.gCancel !== undefined) { G.edit = false; G.msg = ""; render(); return; }
+    if (t.dataset.gSave !== undefined) { saveToken(); return; }
     if (t.dataset.aDel !== undefined) {
       const en = t.dataset.aDel;
       added = added.filter(a => a.en !== en); saveAdded();
@@ -207,6 +199,128 @@
       S = null; rebuild(); render(); return;
     }
   });
+
+  // ---------- Enregistrement sur GitHub ----------
+  // Avec une clé GitHub (collée une fois), chaque mot ajouté est écrit directement dans la liste
+  // partagée (DATA de index.html). Le workflow « Révisions d'anglais - sons » ajoute ensuite tout
+  // seul la phrase d'exemple (Tatoeba), la fréquence et la voix Ava (anglais/tools/fill.py).
+  const TKEY = "gh-token-v1";
+  const REPO = "Norflo/revisions-anglais", FILE = "anglais/site/index.html";
+  let token = ""; try { token = localStorage.getItem(TKEY) || ""; } catch (e) {}
+  const G = { busy: false, msg: "", ok: true, edit: false };
+  const pending = () => added.filter(a => !a.gh);
+
+  const b64dec = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\s/g, "")), c => c.charCodeAt(0)));
+  function b64enc(s) {
+    const b = new TextEncoder().encode(s); let r = "";
+    for (let i = 0; i < b.length; i += 0x8000) r += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000));
+    return btoa(r);
+  }
+
+  async function gh(method, tok, body) {
+    const url = `https://api.github.com/repos/${REPO}/contents/${FILE}` + (method === "GET" ? `?ref=main&t=${Date.now()}` : "");
+    const headers = { Authorization: "Bearer " + tok, Accept: "application/vnd.github+json" };
+    if (body) headers["Content-Type"] = "application/json";
+    const r = await fetch(url, { method, headers, cache: "no-store", body: body ? JSON.stringify(body) : undefined });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) { const e = new Error(j.message || "HTTP " + r.status); e.status = r.status; throw e; }
+    return j;
+  }
+
+  // Ajoute les mots dans DATA, à leur place alphabétique, sans toucher aux autres lignes.
+  function insertWords(html, words) {
+    const m = html.match(/const DATA = \[\n([\s\S]*?)\n\];/);
+    if (!m) throw new Error("liste DATA introuvable");
+    const rows = m[1].split("\n").map(l => l.replace(/,\s*$/, ""));
+    const have = new Set(rows.map(l => key(JSON.parse(l)[0])));
+    const done = []; let fresh = 0;
+    for (const a of words) {
+      if (have.has(key(a.en))) { done.push(a); continue; }
+      const line = JSON.stringify([a.en, a.fr, a.mine || "", a.note || ""]);
+      let k = rows.findIndex(l => JSON.parse(l)[0].localeCompare(a.en, "en", { sensitivity: "base" }) > 0);
+      if (k < 0) k = rows.length;
+      rows.splice(k, 0, line); have.add(key(a.en)); done.push(a); fresh++;
+    }
+    const out = html.slice(0, m.index) + "const DATA = [\n" + rows.join(",\n") + "\n];" + html.slice(m.index + m[0].length);
+    return { html: out, done, fresh };
+  }
+
+  function ghError(e) {
+    if (e.status === 401) return "Clé GitHub refusée (expirée ?) : colle une nouvelle clé plus bas.";
+    if (e.status === 403 || e.status === 404) return "La clé GitHub n'a pas le droit d'écrire dans revisions-anglais (voir plus bas).";
+    if (!e.status) return "Pas d'Internet : le mot est gardé sur le téléphone, il partira plus tard.";
+    return "GitHub : " + e.message;
+  }
+
+  async function sync(quiet) {
+    const words = pending();
+    if (!token || G.busy || !words.length) return;
+    G.busy = true; if (view === "add") render();
+    try {
+      let res;
+      for (let essai = 0; ; essai++) {
+        const f = await gh("GET", token);
+        res = insertWords(b64dec(f.content), words);
+        if (!res.fresh) break;
+        const names = words.map(a => a.en).join(", ");
+        try {
+          await gh("PUT", token, { message: `Anglais : ajout de ${names} (depuis l'appli)`, content: b64enc(res.html), sha: f.sha, branch: "main" });
+          break;
+        } catch (e) { if (essai >= 2 || (e.status !== 409 && e.status !== 422)) throw e; }
+      }
+      res.done.forEach(a => { a.gh = true; }); saveAdded();
+      G.ok = true;
+      G.msg = `Enregistré sur GitHub : ${res.done.map(a => a.en).join(", ")}. La phrase d'exemple et la voix Ava arrivent d'ici quelques minutes.`;
+      if (view === "add" && F.ok) F.msg = "";
+    } catch (e) {
+      G.ok = false; G.msg = ghError(e);
+    }
+    G.busy = false;
+    if (view === "add" && !(quiet && G.ok)) render();
+  }
+
+  async function saveToken() {
+    const el = document.getElementById("g-token");
+    const t = (el ? el.value : "").trim();
+    if (!t) { G.ok = false; G.msg = "Colle d'abord la clé."; return render(); }
+    G.busy = true; G.msg = ""; render();
+    try {
+      await gh("GET", t);
+      token = t; try { localStorage.setItem(TKEY, t); } catch (e) {}
+      G.edit = false; G.ok = true; G.msg = "Clé enregistrée.";
+      G.busy = false; render();
+      sync(false);
+    } catch (e) {
+      G.busy = false; G.ok = false;
+      G.msg = e.status === 401 ? "Cette clé est refusée par GitHub : vérifie-la." : ghError(e);
+      render();
+    }
+  }
+
+  function renderGitHub() {
+    const msg = G.msg ? `<div class="addmsg ${G.ok ? "ok" : "ko"}">${esc(G.msg)}</div>` : "";
+    if (token && !G.edit) return `<section class="panel">
+      <div class="label" style="margin-top:0">Enregistrement sur GitHub : activé ✓</div>
+      <div class="small">Chaque mot ajouté va directement dans la liste partagée. La phrase d'exemple, la fréquence et la voix Ava sont ajoutées toutes seules quelques minutes après.</div>
+      ${msg}
+      <button class="btn ghost" data-g-edit style="margin-top:10px">Changer la clé GitHub</button>
+    </section>`;
+    return `<section class="panel">
+      <div class="label" style="margin-top:0">Enregistrement sur GitHub</div>
+      <div class="small">Pour que les mots ajoutés ici aillent dans la liste partagée (avec phrase d'exemple et voix Ava), colle une clé GitHub, une seule fois.<br>
+      Pour la créer : github.com → photo de profil → Settings → Developer settings → Personal access tokens → <b>Fine-grained tokens</b> → Generate new token.
+      Repository access : <b>Only select repositories</b> → revisions-anglais. Permissions : <b>Contents → Read and write</b>. Puis copie la clé (github_pat_…).</div>
+      <input type="password" id="g-token" placeholder="github_pat_…" autocomplete="off" autocapitalize="off" spellcheck="false" style="margin-top:10px">
+      <div class="two">
+        ${token ? `<button class="btn ghost" data-g-cancel>Annuler</button>` : ""}
+        <button class="btn main" data-g-save ${G.busy ? "disabled" : ""}>${G.busy ? "Vérification…" : "Enregistrer la clé"}</button>
+      </div>
+      ${msg}
+    </section>`;
+  }
+
+  // Au démarrage : envoie les mots restés en attente (pas d'Internet la dernière fois…).
+  setTimeout(() => sync(true), 1500);
 
   // Petit repère « ajouté » dans « Mes mots ».
   const baseList = renderList;
