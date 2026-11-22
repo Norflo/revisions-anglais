@@ -43,6 +43,7 @@ ex-haggle	At the market, you can haggle over the price.
 ex-handful	Only a handful of people came to the meeting.
 ex-hang-on	Hang on, I'll be right back!
 ex-harness	We need to harness the power of the sun.
+ex-harvest	The apples are not yet ripe for harvest.
 ex-he-is-up-to-no-good	Look at him sneaking around: he is up to no good.
 ex-he-pulled-one-over-us	He sold us a broken car: he pulled one over us!
 ex-heed	You should heed the doctor's advice.
