@@ -66,6 +66,8 @@
     #tabs{grid-template-columns:repeat(4,auto);width:min(400px,calc(100% - 24px))}
     #tabs button{font-size:.84rem;padding:11px 8px;white-space:nowrap}
     .addf input{margin-bottom:10px}
+    .addf textarea{width:100%;font:inherit;font-size:1.02rem;padding:12px 16px;border-radius:20px;border:1px solid var(--rim-lo);background:var(--track);color:var(--ink);outline:none;resize:none;margin-bottom:10px;box-shadow:inset 0 1px 2px rgba(0,0,0,.06)}
+    .addf textarea:focus{box-shadow:0 0 0 3px var(--accent-soft)}
     .sugg{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 12px}
     .sugg button{border:0;border-radius:999px;padding:7px 13px;font:inherit;font-size:.9rem;font-weight:600;background:var(--track);color:var(--ink)}
     .sugg button.on{background:var(--t-blue);color:#fff}
@@ -78,7 +80,7 @@
   `;
   document.head.appendChild(st);
 
-  const F = { en: "", fr: "", mine: "", note: "", alts: [], busy: false, msg: "", ok: true };
+  const F = { en: "", fr: "", mine: "", note: "", alts: [], cands: [], busy: false, msg: "", ok: true };
 
   function renderAdd() {
     const mineList = added.slice().sort((a, b) => a.en.localeCompare(b.en, "en", { sensitivity: "base" }));
@@ -88,10 +90,13 @@
         <input type="text" id="a-en" value="${esc(F.en)}" placeholder="ex. : take for granted" autocapitalize="off" spellcheck="false">
         <button class="btn main" type="submit" ${F.busy ? "disabled" : ""}>${F.busy ? "Traduction…" : "Traduire"}</button>
       </form>
-      ${F.alts.length ? `<div class="label">Propositions (touche pour choisir)</div>
+      ${F.cands.length ? `<div class="label">Sens par nature (touche pour ajouter ou retirer)</div>
+        ${POS_ORDER.filter(p => F.cands.some(c => c.tag === p)).map(p => `<div class="sugg"><span class="pos ${POS[p][1]}" style="align-self:center">${POS[p][0]}</span>${F.cands.map((c, k) => c.tag === p ? `<button data-cand="${k}" class="${c.on ? "on" : ""}">${esc(c.w)}</button>` : "").join("")}</div>`).join("")}
+        ${F.alts.length ? `<div class="label">Autre traduction (sans nature)</div><div class="sugg">${F.alts.map((a, k) => `<button data-alt="${k}" class="${key(a) === key(F.fr) ? "on" : ""}">${frHtml(a)}</button>`).join("")}</div>` : ""}`
+      : F.alts.length ? `<div class="label">Propositions (touche pour choisir)</div>
         <div class="sugg">${F.alts.map((a, k) => `<button data-alt="${k}" class="${key(a) === key(F.fr) ? "on" : ""}">${frHtml(a)}</button>`).join("")}</div>` : ""}
       <div class="label">Traduction</div>
-      <input type="text" id="a-fr" value="${esc(F.fr)}" placeholder="ex. : n. brouillon ; v. rédiger">
+      <textarea id="a-fr" rows="2" placeholder="ex. : n. brouillon ; v. rédiger">${esc(F.fr)}</textarea>
       <div class="small" style="margin:-4px 0 10px">Pour préciser la nature : n. (nom), v. (verbe), adj., adv., prép., expr., séparés par « ; ».</div>
       <div class="label">Ma traduction (facultatif)</div>
       <input type="text" id="a-mine" value="${esc(F.mine)}" placeholder="ta propre traduction">
@@ -146,14 +151,14 @@
     if (!r || !r.alts || !r.alts.length) {
       F.msg = "Pas de traduction trouvée (Internet ?). Tu peux l'écrire toi-même."; F.ok = false;
     } else {
-      F.alts = r.alts.concat(F.alts.filter(a => POS_RE.test(a))); if (!F.alts.some(a => POS_RE.test(a))) F.fr = r.alts[0];
+      F.alts = r.alts.concat(F.alts.filter(a => POS_RE.test(a))); if (!F.cands.length && !F.alts.some(a => POS_RE.test(a))) F.fr = r.alts[0];
       F.msg = ""; F.ok = true;
     }
     if (view === "add") render();
   };
 
   // ---------- Traduction par nature du mot (nom, verbe, adjectif…) ----------
-  // Le dictionnaire anglais (dictionaryapi.dev) dit si le mot est un nom, un verbe, un adjectif…
+  // D'abord Wiktionary (plus bas). S'il ne connaît pas le mot : le dictionnaire anglais (dictionaryapi.dev) dit si le mot est un nom, un verbe, un adjectif…
   // Puis chaque sens est traduit séparément (MyMemory) avec un petit mot qui force la nature :
   // « to draft » → rédiger (verbe), « the draft » → le brouillon (nom), « it is … » → adjectif.
   // Résultat proposé : « n. brouillon ; v. rédiger ».
@@ -170,7 +175,83 @@
     const j = await r.json();
     return String((j.responseData && j.responseData.translatedText) || "");
   }
+  // ---------- Wiktionary (en.wiktionary.org) ----------
+  // Chaque article anglais a, pour chaque nature (Noun, Verb…), un tableau de traductions :
+  //   * French: {{t+|fr|brouillon|m}}, {{t+|fr|ébauche|f}}
+  // On garde les mots français de chaque nature, dans l'ordre des sens (le plus courant d'abord).
+  const WK_POS = { "Noun": "n.", "Verb": "v.", "Adjective": "adj.", "Adverb": "adv.", "Preposition": "prép.",
+    "Conjunction": "conj.", "Interjection": "interj.", "Phrase": "expr.", "Idiom": "expr.", "Proverb": "expr.",
+    "Prepositional phrase": "expr.", "Proper noun": "n." };
+  const POS_ORDER = ["n.", "v.", "adj.", "adv.", "prép.", "conj.", "interj.", "expr."];
+
+  function wkParse(text) {
+    const eng = text.match(/(^|\n)==\s*English\s*==\s*\n([\s\S]*?)(?=\n==[^=]|$)/);
+    const body = eng ? eng[2] : text;          // la page « …/translations » n'a pas de section English
+    const out = {}, subpage = [];
+    let pos = null;
+    for (const line of body.split("\n")) {
+      const h = line.match(/^=+\s*([A-Za-z ]+?)\s*=+\s*$/);
+      if (h) { if (WK_POS[h[1]]) pos = WK_POS[h[1]]; continue; }
+      if (!pos) continue;
+      if (/\{\{see translation subpage/i.test(line)) { if (!subpage.includes(pos)) subpage.push(pos); continue; }
+      if (!/^\*:?\s*French\s*:/.test(line)) continue;
+      const re = /\{\{t[t+]*(?:-check|\+check)?\|fr\|([^|}]+)/g; let m;
+      while ((m = re.exec(line))) {
+        const w = m[1].replace(/\[\[(?:[^\]|]*\|)?([^\]]*)\]\]/g, "$1").trim();
+        if (!w) continue;
+        (out[pos] = out[pos] || []);
+        if (!out[pos].some(x => key(x) === key(w))) out[pos].push(w);
+      }
+    }
+    return { out, subpage };
+  }
+  async function wkFetch(title) {
+    const u = "https://en.wiktionary.org/w/api.php?action=parse&format=json&formatversion=2&prop=wikitext&redirects=1&origin=*&page=" + encodeURIComponent(title);
+    const r = await fetch(u); if (!r.ok) return null;
+    const j = await r.json();
+    return j && j.parse && typeof j.parse.wikitext === "string" ? j.parse.wikitext : null;
+  }
+  async function wiktionary(en) {
+    const base = en.trim().replace(/[!?.]+$/, "");
+    const titles = [base.toLowerCase()]; if (base !== base.toLowerCase()) titles.push(base);
+    for (const t of titles) {
+      let txt = null; try { txt = await wkFetch(t); } catch (e) {}
+      if (!txt || !/==\s*English\s*==/.test(txt)) continue;
+      const { out, subpage } = wkParse(txt);
+      if (subpage.length) {
+        let sub = null; try { sub = await wkFetch(t + "/translations"); } catch (e) {}
+        if (sub) { const r2 = wkParse(sub).out; for (const k in r2) { out[k] = (out[k] || []).concat(r2[k].filter(w => !(out[k] || []).some(x => key(x) === key(w)))); } }
+      }
+      const groups = POS_ORDER.filter(p => out[p] && out[p].length).map(p => ({ tag: p, words: out[p].slice(0, 6) }));
+      if (groups.length) return groups;
+    }
+    return null;
+  }
+
+  // Propositions par nature : chaque mot français est un bouton (touche pour l'ajouter ou le retirer) ;
+  // la case « Traduction » se construit toute seule : « n. brouillon, ébauche ; v. rédiger ».
+  function setCands(groups) {
+    F.cands = [];
+    groups.forEach(g => g.words.forEach((w, k) => F.cands.push({ tag: g.tag, w, on: k < 2 })));
+    F.fr = buildFr();
+  }
+  function buildFr() {
+    return POS_ORDER.map(p => {
+      const ws = F.cands.filter(c => c.on && c.tag === p).map(c => c.w);
+      return ws.length ? p + " " + ws.join(", ") : "";
+    }).filter(Boolean).join(" ; ");
+  }
+
   async function posSuggest(en, id) {
+    let groups = null;
+    try { groups = await wiktionary(en); } catch (e) {}
+    if (id !== reqId) return;
+    if (groups) {
+      readForm(); setCands(groups);
+      F.alts = F.alts.filter(a => !POS_RE.test(a));
+      if (view === "add") render();
+      return;
+    }
     if (/\s/.test(en)) return;   // expressions : pas dans le dictionnaire mot à mot
     let kinds = [];
     try {
@@ -200,7 +281,7 @@
     readForm();
     const en = F.en.trim();
     if (!en) return;
-    F.busy = true; F.alts = []; F.msg = ""; reqId++;
+    F.busy = true; F.alts = []; F.cands = []; F.msg = ""; reqId++;
     render();
     try { AndroidApp.translate(reqId, en); } catch (e) { F.busy = false; render(); }
     posSuggest(en, reqId);
@@ -220,7 +301,7 @@
     saveAdded();
     try { AndroidApp.synth(word, audioSlug(word)); } catch (e) {}
     S = null; rebuild();
-    Object.assign(F, { en: "", fr: "", mine: "", note: "", alts: [], msg: `« ${word} » ajouté à tes mots.`, ok: true });
+    Object.assign(F, { en: "", fr: "", mine: "", note: "", alts: [], cands: [], msg: `« ${word} » ajouté à tes mots.`, ok: true });
     render();
     sync(false);
   }
@@ -233,7 +314,8 @@
   $app.addEventListener("click", e => {
     if (view !== "add") return;
     const t = e.target.closest("button"); if (!t) return;
-    if (t.dataset.alt !== undefined) { readForm(); F.fr = F.alts[+t.dataset.alt]; render(); return; }
+    if (t.dataset.alt !== undefined) { readForm(); F.fr = F.alts[+t.dataset.alt]; F.cands.forEach(c => { c.on = false; }); render(); return; }
+    if (t.dataset.cand !== undefined) { readForm(); const c = F.cands[+t.dataset.cand]; c.on = !c.on; F.fr = buildFr(); render(); return; }
     if (t.dataset.aListen !== undefined) { readForm(); if (F.en.trim()) AndroidApp.speak(F.en.trim()); return; }
     if (t.dataset.aSave !== undefined) { save(); return; }
     if (t.dataset.gSync !== undefined) { sync(false); return; }
