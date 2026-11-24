@@ -3,7 +3,7 @@
 // Traduction et voix fournies par l'appli Android (objet AndroidApp).
 (function () {
   if (!window.AndroidApp) return;
-  const AJOUT_VERSION = "24/11 · 5";   // affichée en bas de « + Ajouter » : dit quelle version tourne
+  const AJOUT_VERSION = "24/11 · 6";   // affichée en bas de « + Ajouter » : dit quelle version tourne
 
   const AKEY = "vocab-added-v1";
   const key = s => String(s || "").toLowerCase().replace(/\s+/g, " ").trim();
@@ -343,6 +343,17 @@
   }
 
   function exists(en) { return W.some(w => key(w.en) === key(en)); }
+
+  // Bouton « + » du tableau des 3000 mots : ajoute le mot (avec sa traduction) à mes mots.
+  window.addTopWord = function (en, fr) {
+    if (exists(en)) return;
+    const word = en.charAt(0).toUpperCase() + en.slice(1);
+    added.push({ en: word, fr, mine: "", note: "", t: Date.now() });
+    saveAdded();
+    try { AndroidApp.synth(word, audioSlug(word)); } catch (e) {}
+    S = null; rebuild(); render();
+    sync(true);
+  };
 
   // Remplace la traduction d'un mot déjà dans la liste.
   function replace() {
@@ -706,6 +717,7 @@
   // Colonne « Fréquence » dans l'onglet Tableau
   const baseTable = renderTable;
   renderTable = function () {
+    if (typeof tableMode !== "undefined" && tableMode === "top") return baseTable();   // tableau des 3000 mots : pas de colonne en plus
     let html = baseTable();
     const byEn = {}; for (const w of W) byEn[esc(w.en)] = w;
     html = html.replace("<th>🇬🇧 Anglais</th>", "<th>🇬🇧 Anglais</th><th>📊 Fréquence</th>");

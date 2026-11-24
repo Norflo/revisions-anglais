@@ -32,6 +32,11 @@ Appli Android de révision du vocabulaire anglais, rangée ici à part de Radar 
 - Fraîcheur : `raw.githubusercontent.com/…/main/` peut servir une copie vieille de 5 minutes. L'APK
   demande donc le dernier commit à l'API GitHub (au plus toutes les 20 s) et télécharge les fichiers
   de ce commit précis (`…/<commit>/anglais/site/…`), toujours à jour.
+- `site/top3000.json` : les 3000 mots les plus courants en anglais, `[mot, "nature + traduction"]`, du plus
+  courant au moins courant (onglet Tableau → « 3000 mots courants », bouton + pour en ajouter un à ses mots).
+  Classement : fréquences wordfreq, formes regroupées (was, been → be ; ground et left gardés à part), noms
+  propres et doublons UK/US retirés ; traductions écrites par Claude. Étiquettes en plus : `pron.`, `art.`,
+  `dét.`, `num.`.
 - `android/` : l'appli Android (WebView). Un changement dans `android/` refait l'APK
   (workflow « Révisions d'anglais - APK »). La page et les sons sont aussi copiés dans l'APK
   pour marcher hors connexion.

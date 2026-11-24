@@ -219,6 +219,19 @@ input:focus{box-shadow:0 0 0 3px var(--accent-soft)}
 .tbl td{min-width:120px}
 .tbl td.nt{color:var(--muted);min-width:240px}
 .tbl td.mc{cursor:pointer;min-width:170px}
+.tmode{margin-bottom:12px}
+.tmiss{display:flex;align-items:center;gap:8px;margin-top:10px}
+.tmiss input{width:18px;height:18px;margin:0}
+.tbl.ttop{min-width:0;table-layout:auto}
+.tbl.ttop th,.tbl.ttop td{padding:10px 5px}
+.tbl.ttop td:nth-child(3){width:100%}
+.tbl.ttop td{min-width:0}
+.tbl.ttop tbody th{min-width:0;max-width:none;position:static;box-shadow:none;background:none}
+.tbl.ttop thead th:first-child{position:static;background:none}
+.tbl.ttop td.rk{color:var(--muted);font-variant-numeric:tabular-nums;width:1%;padding-right:4px}
+.tbl.ttop td.ad{width:1%;text-align:center}
+.tbl.ttop .ok{color:var(--good);font-weight:700}
+.addone{border:0;border-radius:999px;width:30px;height:30px;background:var(--accent-soft);color:var(--accent);font:inherit;font-size:1.15rem;font-weight:700;line-height:1}
 .tbl .ph{color:var(--accent);font-weight:600}
 .tbl .pen{color:var(--muted);font-size:.8rem}
 #mineform{display:flex;gap:6px}
@@ -381,8 +394,8 @@ const W = DATA.map(([en,fr,mine,note],i)=>({i,en,fr,mine,note}));
 
 // Nature du mot : la traduction commence par « n. », « v. », « adj. »… (ex. « n. brouillon ; v. rédiger »).
 // Chaque partie est affichée avec une petite étiquette (nom, verbe, adj.…).
-const POS = {"n.":["n.","pn"],"v.":["v.","pv"],"adj.":["adj.","pa"],"adv.":["adv.","pd"],"prép.":["prép.","po"],"conj.":["conj.","po"],"interj.":["interj.","po"],"expr.":["expr.","pe"]};
-const POS_RE = /^(n|v|adj|adv|prép|conj|interj|expr)\.\s+/;
+const POS = {"n.":["n.","pn"],"v.":["v.","pv"],"adj.":["adj.","pa"],"adv.":["adv.","pd"],"prép.":["prép.","po"],"conj.":["conj.","po"],"interj.":["interj.","po"],"expr.":["expr.","pe"],"pron.":["pron.","po"],"art.":["art.","po"],"dét.":["dét.","po"],"num.":["num.","po"]};
+const POS_RE = /^(n|v|adj|adv|prép|conj|interj|expr|pron|art|dét|num)\.\s+/;
 function frParts(s){
   const g = [];
   String(s||"").split(/\s*;\s*/).forEach(seg => {
@@ -810,10 +823,54 @@ function renderList(){
   </section>`;
 }
 
+// ---------- Tableau des 3000 mots les plus courants (top3000.json) ----------
+// Classés du plus courant au moins courant (fréquences de wordfreq, formes regroupées : was → be).
+let tableMode = "mine", TOP = null, topErr = false, topRange = "1", topMissing = false;
+const RANGES = [["1","1–500",0,500],["2","501–1000",500,1000],["3","1001–2000",1000,2000],["4","2001–3000",2000,3000]];
+function loadTop(){
+  if (TOP || loadTop.busy || topErr) return;   // un seul essai (pas de boucle sans Internet)
+  loadTop.busy = true;
+  fetch("top3000.json").then(r => { if (!r.ok) throw 0; return r.json(); })
+    .then(d => { TOP = d; loadTop.busy = false; if (view === "table") render(); })
+    .catch(() => { topErr = true; loadTop.busy = false; if (view === "table") render(); });
+}
+function tableSwitch(){
+  const b = (k,l) => `<button data-tmode="${k}" class="${tableMode===k?"on":""}">${l}</button>`;
+  return `<div class="seg chips tmode">${b("mine","Mes mots")}${b("top","3000 mots courants")}</div>`;
+}
+function renderTop(){
+  loadTop();
+  const head = `<section class="panel tblp">${tableSwitch()}
+    <input type="search" id="search" placeholder="Chercher parmi les 3000 mots…" value="${esc(listQuery)}">`;
+  if (!TOP) return head + `<div class="empty">${topErr ? "Liste pas encore disponible (Internet ?)." : "Chargement des 3000 mots…"}</div></section>`;
+  const mine = new Set(W.map(w => norm(w.en)));
+  const canAdd = typeof window.addTopWord === "function";
+  const q = norm(listQuery);
+  const R = RANGES.find(r => r[0] === topRange) || RANGES[0];
+  let rows = TOP.map((d, k) => ({ k, en: d[0], fr: d[1] }));
+  rows = q ? rows.filter(x => norm(x.en).includes(q) || norm(x.fr).includes(q)) : rows.slice(R[2], R[3]);
+  if (topMissing) rows = rows.filter(x => !mine.has(norm(x.en)));
+  const nMine = TOP.filter(d => mine.has(norm(d[0]))).length;
+  const chip = r => `<button data-trange="${r[0]}" class="${!q && topRange===r[0]?"on":""}">${r[1]}</button>`;
+  return head + `
+    <div class="seg chips" style="margin-top:10px">${RANGES.map(chip).join("")}</div>
+    <label class="small tmiss"><input type="checkbox" data-tmiss ${topMissing?"checked":""}> Seulement ceux qui ne sont pas dans mes mots</label>
+    <div class="small" style="margin:6px 0 4px">Classés du plus courant au moins courant. Tu en as déjà <b>${nMine}</b> dans tes mots (✓).${canAdd ? " Touche <b>+</b> pour en ajouter un à tes révisions." : ""} Touche un mot anglais pour l'écouter.</div>
+    <div class="tblwrap"><table class="tbl ttop">
+      <thead><tr><th>#</th><th>🇬🇧 Anglais</th><th>Nature et traduction</th><th></th></tr></thead>
+      <tbody>${rows.length ? rows.map(x => {
+        const have = mine.has(norm(x.en));
+        return `<tr><td class="rk">${x.k + 1}</td><th scope="row"><span class="say" data-speak="${esc(x.en)}">${esc(x.en)}</span></th><td>${frHtml(x.fr)}</td><td class="ad">${have ? '<span class="ok">✓</span>' : canAdd ? `<button class="addone" data-topadd="${x.k}" aria-label="Ajouter ${esc(x.en)}">+</button>` : ""}</td></tr>`;
+      }).join("") : `<tr><td colspan="4" class="empty">Aucun mot ici.</td></tr>`}</tbody>
+    </table></div>
+  </section>`;
+}
+
 function renderTable(){
+  if (tableMode === "top") return renderTop();
   const q = norm(listQuery);
   const rows = W.filter(w => !q || norm(w.en).includes(q) || norm(w.fr).includes(q) || norm(w.mine).includes(q) || norm(w.note).includes(q));
-  return `<section class="panel tblp">
+  return `<section class="panel tblp">${tableSwitch()}
     <input type="search" id="search" placeholder="Chercher un mot…" value="${esc(listQuery)}">
     <div class="small" style="margin:10px 0 4px">Touche un mot anglais pour l'écouter, ou une case « Ma traduction » pour écrire la tienne. Fais glisser le tableau vers la gauche pour voir les autres colonnes.</div>
     <div class="tblwrap"><table class="tbl">
@@ -885,6 +942,9 @@ $app.addEventListener("click", e => {
   }
   if (t.dataset.next !== undefined) { next(); window.scrollTo(0,0); return; }
   if (t.dataset.filter) { listFilter = t.dataset.filter; render(); return; }
+  if (t.dataset.tmode) { tableMode = t.dataset.tmode; listQuery = ""; editIdx = null; topErr = false; render(); return; }
+  if (t.dataset.trange) { topRange = t.dataset.trange; listQuery = ""; render(); window.scrollTo(0, 0); return; }
+  if (t.dataset.topadd !== undefined && TOP) { const d = TOP[+t.dataset.topadd]; if (d) window.addTopWord(d[0], d[1]); return; }
   if (t.dataset.reset !== undefined) { confirmReset = true; render(); return; }
   if (t.dataset.resetNo !== undefined) { confirmReset = false; render(); return; }
   if (t.dataset.resetYes !== undefined) { P = {}; lsSave(); scheduleDb(); confirmReset = false; render(); return; }
@@ -904,6 +964,9 @@ document.addEventListener("click", e => {
   const q = document.getElementById("search"); if (!q) return;
   q.focus();
   const n = q.value.length; try { q.setSelectionRange(n, n); } catch (err) {}
+});
+$app.addEventListener("change", e => {
+  if (e.target.dataset && e.target.dataset.tmiss !== undefined) { topMissing = e.target.checked; render(); }
 });
 $app.addEventListener("focusout", e => {
   if (e.target.id !== "mineinput") return;
