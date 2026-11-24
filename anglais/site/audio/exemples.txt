@@ -7,6 +7,7 @@ ex-appoint	She was appointed head of the department.
 ex-area	This is my area of expertise.
 ex-back-down	He refused to back down during the argument.
 ex-batch	The last batch of cookies is still in the oven.
+ex-break-out	A brawl is breaking out in the stands.
 ex-carefree	We spent a carefree summer by the sea.
 ex-casually	He leaned casually against the wall.
 ex-clinch	They clinched the deal after hours of talks.
