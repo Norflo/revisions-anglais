@@ -58,6 +58,7 @@ ex-it-can-t-be-helped	The train is cancelled, but it can't be helped.
 ex-itch	These mosquito bites really itch.
 ex-lame	That's a pretty lame excuse.
 ex-laughingstock	After that speech, he became the laughingstock of the office.
+ex-lay-out	Let's lay out some rules to ensure good teamwork.
 ex-lazy	I always feel lazy on Sunday mornings.
 ex-leftover	We had leftover pizza for lunch.
 ex-locker-room	The players are in the locker room.
