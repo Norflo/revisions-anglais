@@ -893,6 +893,16 @@ function commitMine(i, val){
   if (String(val).trim() !== (w.mine || "")) setMine(w, val);
   if (editIdx === i) { editIdx = null; setTimeout(render, 0); }
 }
+// Pages « Mes mots » et « Tableau » : toucher l'écran ailleurs que sur une case, un bouton, un mot à
+// écouter ou une traduction à modifier met le curseur dans la case « Chercher » (à la fin du texte).
+document.addEventListener("click", e => {
+  if (view !== "list" && view !== "table") return;
+  if (document.getElementById("mineinput")) return;   // une traduction en cours de modification : on la laisse se fermer
+  if (e.target.closest("input, textarea, select, button, a, label, [data-speak], [data-edit], #tabs")) return;
+  const q = document.getElementById("search"); if (!q) return;
+  q.focus();
+  const n = q.value.length; try { q.setSelectionRange(n, n); } catch (err) {}
+});
 $app.addEventListener("focusout", e => {
   if (e.target.id !== "mineinput") return;
   commitMine(+e.target.dataset.i, e.target.value);
