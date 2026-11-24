@@ -144,7 +144,7 @@ h1 .flag{position:relative;display:inline-grid;place-items:center;width:42px;hei
 .detail{margin-top:16px;border-top:1px solid var(--line);padding-top:14px;text-align:left;width:100%}
 .detail .ans{font-size:1.2rem;font-weight:600}
 .detail .en{font-family:var(--font-d);font-size:1.35rem;font-weight:700;letter-spacing:-.02em}
-.pos{display:inline-block;font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;line-height:1.5;border-radius:999px;padding:0 7px;margin-right:6px;vertical-align:.18em;background:var(--track);color:var(--muted)}
+.pos{display:inline-block;font-size:.72rem;font-weight:700;letter-spacing:.02em;line-height:1.5;border-radius:999px;padding:0 7px;margin-right:6px;vertical-align:.18em;background:var(--track);color:var(--muted)}
 .pos.pn{background:rgba(10,132,255,.16);color:var(--accent)}
 .pos.pv{background:rgba(255,55,95,.15);color:#d42a52}
 .pos.pa{background:rgba(48,209,88,.18);color:var(--good)}
@@ -377,7 +377,7 @@ const W = DATA.map(([en,fr,mine,note],i)=>({i,en,fr,mine,note}));
 
 // Nature du mot : la traduction commence par « n. », « v. », « adj. »… (ex. « n. brouillon ; v. rédiger »).
 // Chaque partie est affichée avec une petite étiquette (nom, verbe, adj.…).
-const POS = {"n.":["nom","pn"],"v.":["verbe","pv"],"adj.":["adj.","pa"],"adv.":["adv.","pd"],"prép.":["prép.","po"],"conj.":["conj.","po"],"interj.":["interj.","po"],"expr.":["expr.","pe"]};
+const POS = {"n.":["n.","pn"],"v.":["v.","pv"],"adj.":["adj.","pa"],"adv.":["adv.","pd"],"prép.":["prép.","po"],"conj.":["conj.","po"],"interj.":["interj.","po"],"expr.":["expr.","pe"]};
 const POS_RE = /^(n|v|adj|adv|prép|conj|interj|expr)\.\s+/;
 function frParts(s){
   const g = [];
