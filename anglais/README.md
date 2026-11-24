@@ -27,6 +27,9 @@ Appli Android de révision du vocabulaire anglais, rangée ici à part de Radar 
   fléchies ; ≥4,5 → 4, ≥3,8 → 3, ≥3 → 2, sinon 1) ; expressions : estimation à la main.
 - `site/audio/versions.json` : empreinte de chaque son, refaite par le workflow. L'appli l'ajoute à
   l'adresse du son : un son refait (phrase changée) remplace bien l'ancien sur le téléphone.
+- Fraîcheur : `raw.githubusercontent.com/…/main/` peut servir une copie vieille de 5 minutes. L'APK
+  demande donc le dernier commit à l'API GitHub (au plus toutes les 20 s) et télécharge les fichiers
+  de ce commit précis (`…/<commit>/anglais/site/…`), toujours à jour.
 - `android/` : l'appli Android (WebView). Un changement dans `android/` refait l'APK
   (workflow « Révisions d'anglais - APK »). La page et les sons sont aussi copiés dans l'APK
   pour marcher hors connexion.

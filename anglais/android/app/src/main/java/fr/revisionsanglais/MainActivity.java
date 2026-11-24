@@ -47,8 +47,34 @@ public class MainActivity extends Activity {
     static final String HOST = "revisions-anglais.app";
     static final String HOME = "https://" + HOST + "/index.html";
     /** Source en ligne des fichiers. */
-    static final String REMOTE =
-        "https://raw.githubusercontent.com/Norflo/revisions-anglais/main/anglais/site/";
+    static final String REPO = "Norflo/revisions-anglais";
+    static final String REMOTE_MAIN =
+        "https://raw.githubusercontent.com/" + REPO + "/main/anglais/site/";
+
+    // GitHub garde jusqu'à 5 minutes une ancienne copie des fichiers de « main ».
+    // L'appli demande donc d'abord le numéro du dernier commit (API GitHub, toujours à jour) puis
+    // télécharge les fichiers de ce commit précis : jamais d'ancienne copie.
+    // Numéro redemandé au plus toutes les 20 s (l'API autorise 60 demandes par heure sans compte).
+    private static volatile String headSha = null;
+    private static long shaAt = 0;
+
+    private static synchronized void refreshSha() {
+        long now = System.currentTimeMillis();
+        if (now - shaAt < 20000) return;
+        shaAt = now;
+        byte[] d = download("https://api.github.com/repos/" + REPO + "/commits/main", 2500,
+                            "application/vnd.github.sha");
+        if (d == null) return;   // pas d'Internet ou limite atteinte : on garde le précédent
+        String v = new String(d, StandardCharsets.UTF_8).trim();
+        if (v.matches("[0-9a-f]{40}")) headSha = v;
+    }
+
+    private static String remote() {
+        refreshSha();
+        String s = headSha;
+        return s == null ? REMOTE_MAIN
+                         : "https://raw.githubusercontent.com/" + REPO + "/" + s + "/anglais/site/";
+    }
 
     private WebView web;
     private File cacheDir;
@@ -116,7 +142,7 @@ public class MainActivity extends Activity {
 
         byte[] data = null;
         if (fresh) {
-            data = download(REMOTE + path, 4000);
+            data = download(remote() + path, 4000);
             if (data != null) save(cached, data);
             else data = read(cached);
         } else {
@@ -126,7 +152,7 @@ public class MainActivity extends Activity {
                 if (local != null && asset(path) == null) return response("audio/wav", local);
             }
             if (data == null) {
-                data = download(REMOTE + path, 8000);
+                data = download(remote() + path, 8000);
                 if (data != null) save(cached, data);
             }
         }
@@ -304,13 +330,17 @@ public class MainActivity extends Activity {
         }
     }
 
-    private static byte[] download(String url, int timeoutMs) {
+    private static byte[] download(String url, int timeoutMs) { return download(url, timeoutMs, null); }
+
+    private static byte[] download(String url, int timeoutMs, String accept) {
         HttpURLConnection c = null;
         try {
             c = (HttpURLConnection) new URL(url).openConnection();
             c.setConnectTimeout(timeoutMs);
             c.setReadTimeout(timeoutMs);
             c.setUseCaches(false);
+            c.setRequestProperty("User-Agent", "revisions-anglais-app");
+            if (accept != null) c.setRequestProperty("Accept", accept);
             if (c.getResponseCode() != 200) return null;
             try (InputStream in = c.getInputStream()) {
                 byte[] d = readAll(in);

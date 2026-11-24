@@ -536,7 +536,9 @@ function speakEl(url, t){
 // Versions des sons (audio/versions.json, écrit par le workflow) : un son refait change d'adresse,
 // donc le téléphone ne rejoue pas l'ancien.
 let AV = {};
-fetch("audio/versions.json").then(r => r.ok ? r.json() : {}).then(d => { AV = d || {}; }).catch(() => {});
+function loadAV(){ fetch("audio/versions.json").then(r => r.ok ? r.json() : {}).then(d => { if (d && Object.keys(d).length) AV = d; }).catch(() => {}); }
+loadAV();
+document.addEventListener("visibilitychange", () => { if (!document.hidden) loadAV(); });
 function audioUrl(name){ return "audio/" + name + ".mp3?v=" + (AV[name] || "5"); }
 function speak(t){
   const url = audioUrl(audioSlug(t));
