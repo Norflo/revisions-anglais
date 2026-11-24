@@ -7,7 +7,7 @@ ex-appoint	She was appointed head of the department.
 ex-back-down	He refused to back down during the argument.
 ex-batch	The last batch of cookies is still in the oven.
 ex-carefree	We spent a carefree summer by the sea.
-ex-casually	You can talk to me casually.
+ex-casually	He leaned casually against the wall.
 ex-clinch	They clinched the deal after hours of talks.
 ex-clumsy	Sorry, I'm so clumsy, I spilled my coffee.
 ex-content	The content of the report is confidential.
@@ -17,7 +17,7 @@ ex-dazzling	The sun on the snow was dazzling.
 ex-dependable	She's a dependable colleague; you can count on her.
 ex-deter	They put up a sign to deter trespassers.
 ex-draft	I've written a first draft of the letter.
-ex-dusk	I like doing stretching exercises at dusk.
+ex-dusk	The streetlights come on at dusk.
 ex-engulf	The house was quickly engulfed in flames.
 ex-etch	That day is etched in my memory forever.
 ex-evenly	Spread the butter evenly on the bread.
@@ -99,9 +99,9 @@ ex-sloth	Sloth is one of the seven deadly sins.
 ex-slothful	He became slothful after he retired.
 ex-soil	Tomatoes grow best in rich soil.
 ex-sore	I have a sore throat.
-ex-sorrow	A shadow of sorrow flitted across her face.
+ex-sorrow	Her eyes were full of sorrow.
 ex-sour	This milk has gone sour.
-ex-span	His attention span is that of a goldfish.
+ex-span	Children have a short attention span.
 ex-statement	The minister made a statement to the press.
 ex-stay-put	Stay put, I'm coming to get you.
 ex-steady	Hold the ladder steady, please.
