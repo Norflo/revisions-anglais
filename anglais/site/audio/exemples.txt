@@ -4,6 +4,7 @@ ex-acting	She is the acting director while he's away.
 ex-actually	I thought it would be easy, but it's actually quite hard.
 ex-amidst	Amidst all the chaos, she stayed calm.
 ex-appoint	She was appointed head of the department.
+ex-area	This is my area of expertise.
 ex-back-down	He refused to back down during the argument.
 ex-batch	The last batch of cookies is still in the oven.
 ex-carefree	We spent a carefree summer by the sea.
