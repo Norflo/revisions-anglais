@@ -69,6 +69,7 @@
     .sugg{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 12px}
     .sugg button{border:0;border-radius:999px;padding:7px 13px;font:inherit;font-size:.9rem;font-weight:600;background:var(--track);color:var(--ink)}
     .sugg button.on{background:var(--t-blue);color:#fff}
+    .sugg button.on .pos{background:rgba(255,255,255,.28);color:#fff}
     .addmsg{margin:10px 0 0;font-weight:600}
     .addmsg.ok{color:var(--good)} .addmsg.ko{color:var(--bad)}
     .two{display:flex;gap:8px} .two .btn{flex:1}
@@ -88,9 +89,10 @@
         <button class="btn main" type="submit" ${F.busy ? "disabled" : ""}>${F.busy ? "Traduction…" : "Traduire"}</button>
       </form>
       ${F.alts.length ? `<div class="label">Propositions (touche pour choisir)</div>
-        <div class="sugg">${F.alts.map((a, k) => `<button data-alt="${k}" class="${key(a) === key(F.fr) ? "on" : ""}">${esc(a)}</button>`).join("")}</div>` : ""}
+        <div class="sugg">${F.alts.map((a, k) => `<button data-alt="${k}" class="${key(a) === key(F.fr) ? "on" : ""}">${frHtml(a)}</button>`).join("")}</div>` : ""}
       <div class="label">Traduction</div>
-      <input type="text" id="a-fr" value="${esc(F.fr)}" placeholder="traduction en français">
+      <input type="text" id="a-fr" value="${esc(F.fr)}" placeholder="ex. : n. brouillon ; v. rédiger">
+      <div class="small" style="margin:-4px 0 10px">Pour préciser la nature : n. (nom), v. (verbe), adj., adv., prép., expr., séparés par « ; ».</div>
       <div class="label">Ma traduction (facultatif)</div>
       <input type="text" id="a-mine" value="${esc(F.mine)}" placeholder="ta propre traduction">
       <div class="label">Remarque (facultatif)</div>
@@ -104,7 +106,7 @@
     </section>
     <section class="panel">
       <div class="label" style="margin-top:0">Ajoutés sur le téléphone (${added.length})</div>
-      ${mineList.length ? mineList.map(a => `<div class="row"><div class="t"><b class="say" data-speak="${esc(a.en)}">${esc(a.en)}</b>${a.gh ? `<span class="loc">✓ GitHub</span>` : ""}<div class="fr">${esc(a.fr)}</div>${a.mine ? `<div class="mn">Ta traduction : <em>${esc(a.mine)}</em></div>` : ""}</div>
+      ${mineList.length ? mineList.map(a => `<div class="row"><div class="t"><b class="say" data-speak="${esc(a.en)}">${esc(a.en)}</b>${a.gh ? `<span class="loc">✓ GitHub</span>` : ""}<div class="fr">${frHtml(a.fr)}</div>${a.mine ? `<div class="mn">Ta traduction : <em>${esc(a.mine)}</em></div>` : ""}</div>
           <button class="del" data-a-del="${esc(a.en)}" aria-label="Supprimer">✕</button></div>`).join("")
         : `<div class="empty">Aucun mot ajouté ici pour l'instant.</div>`}
       ${token && pending().length ? `<button class="btn ghost" data-g-sync style="margin-top:12px" ${G.busy ? "disabled" : ""}>${G.busy ? "Envoi…" : "Envoyer sur GitHub"}</button>` : ""}
@@ -144,10 +146,55 @@
     if (!r || !r.alts || !r.alts.length) {
       F.msg = "Pas de traduction trouvée (Internet ?). Tu peux l'écrire toi-même."; F.ok = false;
     } else {
-      F.alts = r.alts; F.fr = r.alts[0]; F.msg = ""; F.ok = true;
+      F.alts = r.alts.concat(F.alts.filter(a => POS_RE.test(a))); if (!F.alts.some(a => POS_RE.test(a))) F.fr = r.alts[0];
+      F.msg = ""; F.ok = true;
     }
     if (view === "add") render();
   };
+
+  // ---------- Traduction par nature du mot (nom, verbe, adjectif…) ----------
+  // Le dictionnaire anglais (dictionaryapi.dev) dit si le mot est un nom, un verbe, un adjectif…
+  // Puis chaque sens est traduit séparément (MyMemory) avec un petit mot qui force la nature :
+  // « to draft » → rédiger (verbe), « the draft » → le brouillon (nom), « it is … » → adjectif.
+  // Résultat proposé : « n. brouillon ; v. rédiger ».
+  const CUES = {
+    verb: ["v.", w => "to " + w, t => t.replace(/^(de |d'|d’)/i, "")],
+    noun: ["n.", w => "the " + w, t => t.replace(/^(le |la |les |l'|l’|un |une |des |du )/i, "")],
+    adjective: ["adj.", w => "it is " + w, t => { t = t.replace(/^(c'est |c’est |il est |elle est |cela est |ça est )/i, ""); return /^(un|une|le|la|les|des|du|l'|l’)\b/i.test(t) ? "" : t; }],
+    adverb: ["adv.", w => w, t => t],
+    preposition: ["prép.", w => w, t => t],
+    interjection: ["interj.", w => w + "!", t => t.replace(/\s*!$/, "")],
+  };
+  async function mm(q) {
+    const r = await fetch("https://api.mymemory.translated.net/get?langpair=en%7Cfr&q=" + encodeURIComponent(q));
+    const j = await r.json();
+    return String((j.responseData && j.responseData.translatedText) || "");
+  }
+  async function posSuggest(en, id) {
+    if (/\s/.test(en)) return;   // expressions : pas dans le dictionnaire mot à mot
+    let kinds = [];
+    try {
+      const r = await fetch("https://api.dictionaryapi.dev/api/v2/entries/en/" + encodeURIComponent(en.toLowerCase()));
+      if (!r.ok) return;
+      const d = await r.json();
+      d.forEach(e => (e.meanings || []).forEach(m => { if (CUES[m.partOfSpeech] && !kinds.includes(m.partOfSpeech)) kinds.push(m.partOfSpeech); }));
+    } catch (e) { return; }
+    if (!kinds.length) return;
+    const parts = [];
+    for (const k of kinds.slice(0, 4)) {
+      const [tag, cue, clean] = CUES[k];
+      let t = "";
+      try { t = clean((await mm(cue(en))).trim().replace(/[.!]$/, "").trim()); } catch (e) {}
+      if (!t || key(t) === key(cue(en)) || key(t) === key(en)) continue;
+      t = t.charAt(0).toLowerCase() + t.slice(1);
+      if (!parts.some(p => key(p.slice(p.indexOf(" ") + 1)) === key(t))) parts.push(tag + " " + t);
+    }
+    if (id !== reqId || !parts.length) return;
+    const full = parts.join(" ; ");
+    F.alts = [full].concat(parts.length > 1 ? parts : [], F.alts.filter(a => !POS_RE.test(a)));
+    readForm(); F.fr = full;
+    if (view === "add") render();
+  }
 
   function translate() {
     readForm();
@@ -156,6 +203,7 @@
     F.busy = true; F.alts = []; F.msg = ""; reqId++;
     render();
     try { AndroidApp.translate(reqId, en); } catch (e) { F.busy = false; render(); }
+    posSuggest(en, reqId);
   }
 
   function exists(en) { return W.some(w => key(w.en) === key(en)); }

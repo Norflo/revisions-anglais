@@ -6,6 +6,11 @@ Appli Android de révision du vocabulaire anglais, rangée ici à part de Radar 
 - `site/` : la page (`index.html`, liste des mots dans `DATA`) et les sons (`audio/<mot>.mp3`).
   L'appli va chercher ces fichiers ici quand il y a Internet : un mot ajouté dans `site/`
   arrive dans l'appli sans réinstaller l'APK.
+- **Nature des mots** : la traduction (2ᵉ colonne de `DATA`) commence par la nature du mot, une partie par
+  sens, séparées par « ; » : `n. brouillon ; v. rédiger`. Étiquettes : `n.` nom, `v.` verbe, `adj.`, `adv.`,
+  `prép.`, `conj.`, `interj.`, `expr.` (expression). L'appli les affiche en petites étiquettes de couleur.
+  Dans « + Ajouter », l'appli cherche les natures du mot (dictionaryapi.dev) et traduit chacune à part
+  (« to draft » → verbe, « the draft » → nom) : la proposition est à vérifier.
 - `site/ajout.js` : onglet « + Ajouter » (seulement dans l'APK) : traduction en ligne (MyMemory),
   voix du téléphone en attendant Ava. Avec une clé GitHub collée une fois dans l'onglet (fine-grained
   token, dépôt revisions-anglais seulement, Contents : Read and write), chaque mot ajouté est écrit

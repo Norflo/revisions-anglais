@@ -144,6 +144,13 @@ h1 .flag{position:relative;display:inline-grid;place-items:center;width:42px;hei
 .detail{margin-top:16px;border-top:1px solid var(--line);padding-top:14px;text-align:left;width:100%}
 .detail .ans{font-size:1.2rem;font-weight:600}
 .detail .en{font-family:var(--font-d);font-size:1.35rem;font-weight:700;letter-spacing:-.02em}
+.pos{display:inline-block;font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;line-height:1.5;border-radius:999px;padding:0 7px;margin-right:6px;vertical-align:.18em;background:var(--track);color:var(--muted)}
+.pos.pn{background:rgba(10,132,255,.16);color:var(--accent)}
+.pos.pv{background:rgba(255,55,95,.15);color:#d42a52}
+.pos.pa{background:rgba(48,209,88,.18);color:var(--good)}
+.pos.pd{background:rgba(255,149,10,.18);color:#b86a00}
+.posl+.posl{margin-top:4px}
+.hero-fr .pos,.opt.right .pos,.opt.wrong .pos{background:rgba(255,255,255,.28);color:inherit}
 .detail .note{margin-top:6px;font-size:.92rem;color:var(--muted)}
 .mine{margin-top:10px;font-size:.9rem;padding:9px 12px;border-radius:14px;background:var(--accent-soft)}
 .mine em{font-style:italic}
@@ -236,137 +243,157 @@ input:focus{box-shadow:0 0 0 3px var(--accent-soft)}
 <script>
 // Données : [anglais, traduction de Claude, ta traduction (tes notes), remarque]
 const DATA = [
-["Acquaint","familiariser, mettre au courant","","be acquainted with = connaître ; get acquainted = faire connaissance ; an acquaintance = une connaissance (personne)"],
-["Act up","se conduire mal, faire des siennes","agir, se conduire mal","aussi pour une machine : mal fonctionner"],
-["Acting","par intérim","par intérim","aussi « le jeu d'acteur »"],
-["Actually","en fait","en fait","faux ami : ne veut pas dire « actuellement »"],
-["Amidst","au milieu de, parmi","au milieu de",""],
-["Appoint","nommer (à un poste)","nommer","appointment = rendez-vous ou nomination"],
-["Back down","reculer, faire marche arrière","reculer","céder (dans une dispute)"],
-["Batch","Lot","",""],
-["Carefree","insouciant","insouciant",""],
-["Casualy","Décontracté","Tranquillement",""],
-["Clinch","décrocher, emporter (une victoire, un accord) ; conclure","","clinch a deal = conclure une affaire ; clinch the title = décrocher le titre ; en boxe : le corps-à-corps ; aussi « étreinte »"],
-["Clumsy","maladroit","maladroit",""],
-["Content","contenu","contenu","aussi « satisfait, content »"],
-["Dashing","fringant, séduisant","superbe",""],
-["Dawdle","lambiner, traîner","lambiner",""],
-["Dazzling","Éblouissant.","",""],
-["Dependable","fiable","fiable",""],
-["Deter","Dissuader","",""],
-["Draft","rédiger ; un brouillon","rédiger, un brouillon","aussi « courant d'air » (US)"],
-["Dusk","le crépuscule","",""],
-["Engulf","engloutir","engloutir",""],
-["Etch","graver","graver dans la mémoire","etched in memory = gravé dans la mémoire"],
-["Evenly","de manière égale, uniformément","de manière égale",""],
-["Fancy","chic, de luxe","de luxe","aussi « avoir envie de » (UK)"],
-["Fathom","sonder ; comprendre","sonder","I can't fathom = je n'arrive pas à comprendre"],
-["Fend off","repousser","repousser",""],
-["File a motion","déposer une requête","déposer une requête",""],
-["Fledgling","oisillon","oisillon","aussi « débutant, naissant » (a fledgling company)"],
-["Foam","mousse, écume","baver","foam at the mouth = baver, écumer de rage"],
-["Forehead","front","front",""],
-["Forfeit","perdre, renoncer à","perdre","aussi « déclarer forfait »"],
-["Foster","favoriser, encourager","favoriser","foster family = famille d'accueil"],
-["Garner","recueillir, obtenir","recueillir",""],
-["Gifted","doué, talentueux","","a gifted child = un enfant surdoué ; aussi « offert » (to gift = offrir) ; a gift = un cadeau, un don"],
-["Give off","émettre, dégager (odeur, chaleur)","émettre",""],
-["Give way","céder, s'effondrer","révéler","aussi « céder le passage »"],
-["Goose","oie","oie","pluriel : geese"],
-["Grant","accorder","accorder","aussi « une subvention, une bourse »"],
-["Grief","chagrin, deuil","chagrin",""],
-["Grieve","pleurer (un mort), être en deuil","deuil","le deuil = grief"],
-["Groom","former, préparer","former","aussi « toiletter » ; le marié (bridegroom)"],
-["Ground","sol, terrain ; position","position","hold your ground = tenir bon"],
-["Haggle","marchander","marchander",""],
-["Handful","une poignée","irritant","he's a handful = il est difficile à gérer"],
-["Hang on!","attends ! accroche-toi !","Attendez ! Accrochez-vous !",""],
-["Harness","exploiter, maîtriser","exploiter","aussi « harnais »"],
-["Harvest","Récolte","",""],
-["He is up to no good","il prépare un mauvais coup","il prépare un mauvais coup",""],
-["He pulled one over us","il nous a bernés","il nous a bernés","expression : pull one over on someone"],
-["Heed","tenir compte de","tenir compte",""],
-["Hefty","lourd, gros, costaud","lourd, fort, gros","a hefty price = un prix élevé"],
-["I didn't mean it","je ne le pensais pas","je ne le pensais pas",""],
-["I need to get going","je dois y aller","Je dois partir",""],
-["I was mistaken","je me suis trompé","je me suis trompé",""],
-["I've been wronged","j'ai été lésé","j'ai été lésé",""],
-["Idle","oisif, inactif","paresseux","aussi « au ralenti » (moteur)"],
-["It can't be helped","on n'y peut rien, c'est comme ça","","aussi « tant pis », « il n'y a rien à faire »"],
-["Itch","démangeaison ; démanger, gratter","","it itches = ça gratte ; itchy = qui gratte ; to be itching to = brûler d'envie de ; to scratch an itch = assouvir une envie"],
-["Lame","nul, faible (familier)","faible","sens premier : boiteux"],
-["Laughingstock","la risée, l'objet de moquerie","","ex. : He became the laughingstock of the town = il est devenu la risée de la ville"],
-["Lazy","paresseux","paresseux",""],
-["Leftover","restes","restes","leftovers = les restes d'un repas"],
-["Locker room","vestiaire","vestiaire",""],
-["Loiter","flâner, traîner","flâner",""],
-["Moat","douves, fossé (d'un château)","fossé",""],
-["Onward","en avant, plus loin","en avant","from now onward = désormais"],
-["Overtake","doubler, dépasser (un véhicule) ; dépasser, rattraper","","aussi « surprendre, frapper » (overtaken by events = dépassé par les événements) ; no overtaking = interdiction de doubler"],
-["Per","par, selon","comme","per day = par jour ; as per = conformément à"],
-["Perk","avantage","avantage","perks = avantages en nature"],
-["Pester","harceler, embêter","harceler",""],
-["Policy","politique (règle, ligne de conduite)","politique","aussi « police d'assurance » ; la politique des partis = politics"],
-["Postpone","reporter, repousser","retarder, reporter",""],
-["Prior","précédent, antérieur","précédent","prior to = avant"],
-["Pull off","réussir (un truc difficile)","réussir",""],
-["Pull over","se ranger, s'arrêter (sur le bas-côté)","arrêtez-vous","Pull over! = rangez-vous !"],
-["Quell","réprimer, étouffer","réprimer","aussi « apaiser » (une peur)"],
-["Quote","citation","citation","to quote = citer ; aussi « devis »"],
-["Reach out","contacter, prendre contact","contacter",""],
-["Redeem","racheter","racheter","aussi « échanger » (un bon, des points)"],
-["Relapse","rechute","rechute",""],
-["Remnant","reste, vestige","reste",""],
-["Resort","recourir (à)","recourir","aussi « station » (balnéaire, de ski) ; last resort = dernier recours"],
-["Resume","reprendre","reprendre","faux ami : résumer = summarize"],
-["Riddle","devinette, énigme ; cribler","cribler, devinette","riddled with = criblé de"],
-["Ridge","crête","crête",""],
-["Ripen","mûrir","mûrir",""],
-["Roundabout","indirect, détourné","indirect, détourné","aussi « rond-point »"],
-["Sample","échantillon ; prélèvement (médical)","","to sample = goûter, essayer ; prélever ; a blood sample = un prélèvement sanguin ; a free sample = un échantillon gratuit"],
-["Schedule","emploi du temps, horaire, programme ; planifier, programmer","Calendrier","on schedule = dans les temps ; behind schedule = en retard ; to schedule a meeting = programmer une réunion ; « calendrier » au sens de planning"],
-["Scramble","brouiller","brouiller","aussi « se démener » ; scrambled eggs = œufs brouillés"],
-["Seek","chercher, rechercher","rechercher",""],
-["Seep","suinter, s'infiltrer","suinter",""],
-["Set up","piéger, tendre un piège","","you've set me up = tu m'as piégé ; aussi « installer, mettre en place », « arranger un rencard »"],
-["Shove","pousser (brutalement)","pousser",""],
-["Shred","lambeau, morceau","morceau","to shred = déchiqueter"],
-["Slack","paresser, se relâcher","paresser","slack (adj.) = mou, détendu"],
-["Slay","tuer","tuer","familier : assurer, être au top"],
-["Sloth","paresse","paresse","aussi l'animal « paresseux »"],
-["Slothful","paresseux","paresseux",""],
-["Soil","sol, terre","Sol, souillure","to soil = salir, souiller"],
-["Sore","douloureux","douloureux","sore throat = mal de gorge"],
-["Sorrow","Douleur","",""],
-["Sour","aigre","aigre",""],
-["Span","plage","Durée",""],
-["Statement","déclaration","déclaration","aussi « relevé (de compte) »"],
-["Stay put","ne bouge pas, reste où tu es","restez où vous êtes",""],
-["Steady","stable, régulier, constant","constant","Steady! = doucement, du calme ; a steady job = un emploi stable ; to steady = stabiliser ; Ready, steady, go! = à vos marques, prêts, partez !"],
-["Stern","sévère","sévère","aussi « la poupe » (d'un bateau)"],
-["Still","immobile","immobile","aussi « encore, toujours »"],
-["Strain","tension, pression","tension","to strain = forcer, se froisser (un muscle)"],
-["Strife","conflit, discorde","lutte, conflit",""],
-["Stroll","se promener, flâner","se promener","a stroll = une balade"],
-["Sway","influencer ; osciller, se balancer","influencer, osciller, ballotter",""],
-["Swell","gonfler, enfler","gonfler","familier (US) : super"],
-["Tail","filer, suivre (quelqu'un)","traquer","a tail = une queue"],
-["Throughout","tout au long de, partout dans","tout au long de",""],
-["Tuck","rentrer, glisser, border","","tuck in your shirt = rentre ta chemise ; tuck someone in = border quelqu'un ; tucked away = niché, caché"],
-["Tuck your tail","mettre la queue entre les jambes","","tuck your tail and run = partir la queue entre les jambes ; en sport : rentrer le coccyx"],
-["Tusk","défense (d'éléphant, de morse, de sanglier)","","elephant tusks = défenses d'éléphant ; ivory tusk = défense en ivoire"],
-["Wage","salaire","salaire","to wage war = faire la guerre"],
-["Wary","méfiant","méfiant",""],
-["Wedge","coin, cale","coin","to wedge = coincer"],
-["Whim","caprice","caprice",""],
-["Work out","s'entraîner ; résoudre","se développer","aussi « bien se passer » (it worked out)"],
-["Worthwhile","qui en vaut la peine","intéressant",""],
-["Wrap up","conclure, terminer","conclure","aussi « emballer », « bien se couvrir »"],
-["Wreck","détruire, démolir","détruire","a wreck = une épave"],
-["Wretch","misérable, malheureux","misérable",""],
-["Yummy","délicieux","délicieux",""]
+["Acquaint","v. familiariser, mettre au courant","","be acquainted with = connaître ; get acquainted = faire connaissance ; an acquaintance = une connaissance (personne)"],
+["Act up","v. faire des siennes, se conduire mal ; mal fonctionner (machine)","agir, se conduire mal",""],
+["Acting","adj. par intérim, suppléant ; n. jeu d'acteur, métier d'acteur","par intérim","acting director = directeur par intérim"],
+["Actually","adv. en fait, en réalité, vraiment","en fait","faux ami : ne veut pas dire « actuellement »"],
+["Amidst","prép. au milieu de, parmi","au milieu de",""],
+["Appoint","v. nommer (à un poste) ; fixer (une date, un lieu)","nommer","appointment = rendez-vous ou nomination"],
+["Back down","v. reculer, céder, faire marche arrière","reculer",""],
+["Batch","n. lot, fournée, série ; v. regrouper par lots","",""],
+["Carefree","adj. insouciant","insouciant",""],
+["Casualy","adv. avec désinvolture, nonchalamment ; de façon décontractée (s'habiller)","Tranquillement","s'écrit « casually » ; casual (adj.) = décontracté, occasionnel"],
+["Clinch","v. décrocher, emporter (une victoire, un accord), conclure ; n. corps-à-corps (boxe), étreinte","","clinch a deal = conclure une affaire ; clinch the title = décrocher le titre"],
+["Clumsy","adj. maladroit","maladroit",""],
+["Content","n. contenu ; adj. satisfait, content ; v. contenter","contenu","content oneself with = se contenter de ; on dit CONtent (nom) mais conTENT (adjectif, verbe)"],
+["Dashing","adj. fringant, séduisant, élégant","superbe",""],
+["Dawdle","v. lambiner, traîner","lambiner",""],
+["Dazzling","adj. éblouissant","",""],
+["Dependable","adj. fiable, sur qui on peut compter","fiable",""],
+["Deter","v. dissuader, décourager","","a deterrent = un moyen de dissuasion"],
+["Draft","n. brouillon, ébauche ; courant d'air (US) ; v. rédiger (un premier jet), ébaucher","rédiger, un brouillon","draft beer = bière pression ; aussi « la conscription » (US)"],
+["Dusk","n. crépuscule, tombée de la nuit","",""],
+["Engulf","v. engloutir, submerger","engloutir",""],
+["Etch","v. graver","graver dans la mémoire","etched in memory = gravé dans la mémoire"],
+["Evenly","adv. de manière égale, uniformément","de manière égale",""],
+["Fancy","adj. chic, de luxe, sophistiqué ; v. avoir envie de (UK) ; n. envie, caprice","de luxe","Fancy a cup of tea? = ça te dit, un thé ? ; take a fancy to = s'enticher de"],
+["Fathom","v. comprendre, saisir ; sonder ; n. brasse (mesure de profondeur, ≈ 1,8 m)","sonder","I can't fathom = je n'arrive pas à comprendre"],
+["Fend off","v. repousser, parer (une attaque, des questions)","repousser",""],
+["File a motion","expr. déposer une requête (en justice)","déposer une requête",""],
+["Fledgling","n. oisillon ; adj. naissant, débutant","oisillon","a fledgling company = une jeune entreprise"],
+["Foam","n. mousse, écume ; v. mousser, écumer","baver","foam at the mouth = baver, écumer de rage"],
+["Forehead","n. front","front",""],
+["Forfeit","v. perdre (par sanction), renoncer à ; n. gage, amende","perdre","aussi « déclarer forfait » (to forfeit a match)"],
+["Foster","v. favoriser, encourager ; accueillir, élever (un enfant placé) ; adj. d'accueil","favoriser","foster family = famille d'accueil"],
+["Garner","v. recueillir, obtenir (des soutiens, des éloges)","recueillir",""],
+["Gifted","adj. doué, talentueux ; offert","","a gifted child = un enfant surdoué ; aussi « offert » (to gift = offrir) ; a gift = un cadeau, un don"],
+["Give off","v. émettre, dégager (odeur, chaleur, lumière)","émettre",""],
+["Give way","v. céder, s'effondrer ; céder le passage","révéler","give way to = laisser place à"],
+["Goose","n. oie","oie","pluriel : geese"],
+["Grant","v. accorder, octroyer ; admettre ; n. subvention, bourse","accorder","take for granted = considérer comme acquis"],
+["Grief","n. chagrin, deuil, peine","chagrin",""],
+["Grieve","v. pleurer (un mort), être en deuil, avoir du chagrin","deuil","le deuil = grief"],
+["Groom","v. préparer, former (pour un poste) ; toiletter (un animal) ; n. marié ; palefrenier","former","bridegroom = le marié"],
+["Ground","n. sol, terrain ; position ; motif (grounds = raisons) ; v. priver de sortie ; clouer au sol (un avion)","position","hold your ground = tenir bon ; ground coffee = café moulu (participe passé de grind)"],
+["Haggle","v. marchander","marchander",""],
+["Handful","n. poignée ; personne difficile à gérer","irritant","he's a handful = il est difficile à gérer"],
+["Hang on!","interj. attends ! accroche-toi !","Attendez ! Accrochez-vous !",""],
+["Harness","v. exploiter, maîtriser (une énergie) ; n. harnais","exploiter",""],
+["Harvest","n. récolte, moisson ; v. récolter, moissonner","",""],
+["He is up to no good","expr. il prépare un mauvais coup","il prépare un mauvais coup",""],
+["He pulled one over us","expr. il nous a bernés","il nous a bernés","expression : pull one over on someone"],
+["Heed","v. tenir compte de, écouter (un conseil) ; n. attention","tenir compte","pay heed to = prêter attention à"],
+["Hefty","adj. lourd, gros, costaud ; élevé (prix)","lourd, fort, gros","a hefty price = un prix élevé"],
+["I didn't mean it","expr. je ne le pensais pas, je ne l'ai pas fait exprès","je ne le pensais pas",""],
+["I need to get going","expr. je dois y aller","Je dois partir",""],
+["I was mistaken","expr. je me suis trompé","je me suis trompé",""],
+["I've been wronged","expr. j'ai été lésé","j'ai été lésé",""],
+["Idle","adj. oisif, inactif ; au ralenti (moteur) ; v. tourner au ralenti ; paresser","paresseux","idle threats = menaces en l'air"],
+["It can't be helped","expr. on n'y peut rien, c'est comme ça","","aussi « tant pis », « il n'y a rien à faire »"],
+["Itch","n. démangeaison ; envie ; v. démanger, gratter","","it itches = ça gratte ; itchy = qui gratte ; to be itching to = brûler d'envie de ; to scratch an itch = assouvir une envie"],
+["Lame","adj. nul, minable (familier) ; boiteux ; bancal (une excuse)","faible",""],
+["Laughingstock","n. la risée, l'objet de moquerie","","ex. : He became the laughingstock of the town = il est devenu la risée de la ville"],
+["Lazy","adj. paresseux","paresseux",""],
+["Leftover","n. reste ; adj. restant, qui reste","restes","leftovers = les restes d'un repas"],
+["Locker room","n. vestiaire","vestiaire",""],
+["Loiter","v. traîner, flâner, rôder","flâner","no loitering = interdiction de traîner ici"],
+["Moat","n. douves, fossé (d'un château)","fossé",""],
+["Onward","adv. en avant, plus loin ; adj. qui continue","en avant","from now onward = désormais ; onward journey = suite du voyage"],
+["Overtake","v. doubler, dépasser (un véhicule) ; rattraper ; surprendre, frapper","","overtaken by events = dépassé par les événements ; no overtaking = interdiction de doubler"],
+["Per","prép. par ; selon","comme","per day = par jour ; as per = conformément à"],
+["Perk","n. avantage (en nature) ; v. perk up = se ragaillardir","avantage","perks = avantages en nature"],
+["Pester","v. harceler, embêter, importuner","harceler",""],
+["Policy","n. politique, ligne de conduite, règlement ; police (d'assurance)","politique","la politique des partis = politics"],
+["Postpone","v. reporter, repousser","retarder, reporter",""],
+["Prior","adj. précédent, antérieur, préalable ; n. prieur (religieux)","précédent","prior to = avant"],
+["Pull off","v. réussir (un coup difficile) ; enlever (un vêtement) ; quitter (la route)","réussir",""],
+["Pull over","v. se ranger, s'arrêter sur le bas-côté ; faire s'arrêter (un conducteur)","arrêtez-vous","Pull over! = rangez-vous !"],
+["Quell","v. réprimer, étouffer ; apaiser (une peur)","réprimer",""],
+["Quote","n. citation ; devis ; v. citer ; faire un devis","citation","quotation marks = guillemets"],
+["Reach out","v. contacter, prendre contact ; tendre la main","contacter",""],
+["Redeem","v. racheter, se racheter ; échanger (un bon, des points)","racheter","redeeming quality = qualité qui rachète le reste"],
+["Relapse","n. rechute ; v. rechuter","rechute",""],
+["Remnant","n. reste, vestige ; coupon (de tissu)","reste",""],
+["Resort","v. recourir (à) ; n. station (balnéaire, de ski) ; recours","recourir","last resort = dernier recours ; resort to violence = recourir à la violence"],
+["Resume","v. reprendre (après une pause) ; n. CV (US, souvent écrit résumé)","reprendre","faux ami : résumer = summarize"],
+["Riddle","n. devinette, énigme ; v. cribler","cribler, devinette","riddled with = criblé de"],
+["Ridge","n. crête, arête","crête",""],
+["Ripen","v. mûrir","mûrir",""],
+["Roundabout","adj. indirect, détourné ; n. rond-point ; manège (UK)","indirect, détourné",""],
+["Sample","n. échantillon ; prélèvement ; v. goûter, essayer ; prélever","","a blood sample = un prélèvement sanguin ; a free sample = un échantillon gratuit"],
+["Schedule","n. emploi du temps, horaire, programme, planning ; v. planifier, programmer","Calendrier","on schedule = dans les temps ; behind schedule = en retard ; to schedule a meeting = programmer une réunion"],
+["Scramble","v. brouiller ; se démener, se bousculer ; grimper (à quatre pattes) ; n. ruée, bousculade","brouiller","scrambled eggs = œufs brouillés"],
+["Seek","v. chercher, rechercher ; solliciter (seek advice)","rechercher",""],
+["Seep","v. suinter, s'infiltrer","suinter",""],
+["Set up","v. piéger ; installer, mettre en place ; arranger un rencard ; n. coup monté ; installation","","you've set me up = tu m'as piégé ; setup = installation, configuration"],
+["Shove","v. pousser (brutalement), bousculer ; fourrer ; n. poussée","pousser",""],
+["Shred","n. lambeau, morceau ; v. déchiqueter, râper","morceau","not a shred of evidence = pas la moindre preuve"],
+["Slack","v. paresser, se relâcher ; adj. mou, détendu ; n. mou (d'une corde)","paresser","slack off = se la couler douce ; slacks = pantalon"],
+["Slay","v. tuer (littéraire) ; assurer, être au top (familier)","tuer",""],
+["Sloth","n. paresse ; paresseux (l'animal)","paresse",""],
+["Slothful","adj. paresseux","paresseux",""],
+["Soil","n. sol, terre ; v. salir, souiller","Sol, souillure",""],
+["Sore","adj. douloureux ; vexé, fâché (familier) ; n. plaie","douloureux","sore throat = mal de gorge ; sore loser = mauvais perdant"],
+["Sorrow","n. chagrin, peine, tristesse","",""],
+["Sour","adj. aigre, acide ; tourné (lait) ; v. tourner, se gâter","aigre",""],
+["Span","n. durée, période ; envergure, portée (d'un pont) ; v. couvrir, s'étendre sur","Durée","life span = durée de vie ; attention span = capacité d'attention"],
+["Statement","n. déclaration ; relevé (de compte)","déclaration",""],
+["Stay put","expr. ne pas bouger, rester où l'on est","restez où vous êtes",""],
+["Steady","adj. stable, régulier, constant ; v. stabiliser ; interj. doucement !","constant","a steady job = un emploi stable ; Ready, steady, go! = à vos marques, prêts, partez !"],
+["Stern","adj. sévère ; n. poupe (d'un bateau)","sévère",""],
+["Still","adv. encore, toujours ; quand même ; adj. immobile, calme ; plate (eau)","immobile","still water = eau plate ; stand still = ne pas bouger"],
+["Strain","n. tension, pression ; souche (virus) ; v. forcer, se froisser (un muscle) ; égoutter, filtrer","tension","under strain = sous pression"],
+["Strife","n. conflit, discorde, lutte","lutte, conflit",""],
+["Stroll","v. se promener, flâner ; n. balade","se promener",""],
+["Sway","v. influencer ; osciller, se balancer ; n. influence, emprise","influencer, osciller, ballotter","hold sway = avoir de l'influence"],
+["Swell","v. gonfler, enfler ; n. houle ; adj. super (US, familier)","gonfler",""],
+["Tail","n. queue ; v. filer, suivre (quelqu'un)","traquer","heads or tails = pile ou face"],
+["Throughout","prép. tout au long de, partout dans ; adv. partout, d'un bout à l'autre","tout au long de",""],
+["Tuck","v. rentrer, glisser, border","","tuck in your shirt = rentre ta chemise ; tuck someone in = border quelqu'un ; tucked away = niché, caché"],
+["Tuck your tail","expr. mettre la queue entre les jambes","","tuck your tail and run = partir la queue entre les jambes ; en sport : rentrer le coccyx"],
+["Tusk","n. défense (d'éléphant, de morse, de sanglier)","","elephant tusks = défenses d'éléphant ; ivory tusk = défense en ivoire"],
+["Wage","n. salaire ; v. mener (une guerre, une campagne)","salaire","to wage war = faire la guerre ; minimum wage = salaire minimum"],
+["Wary","adj. méfiant, prudent","méfiant","be wary of = se méfier de"],
+["Wedge","n. coin, cale ; part (de tarte, de fromage) ; v. coincer, caler","coin",""],
+["Whim","n. caprice, lubie","caprice",""],
+["Work out","v. s'entraîner ; résoudre, trouver ; bien se passer","se développer","it worked out = ça s'est bien passé"],
+["Worthwhile","adj. qui en vaut la peine, utile","intéressant",""],
+["Wrap up","v. conclure, terminer ; emballer ; bien se couvrir","conclure","wrap up warm = couvre-toi bien"],
+["Wreck","v. détruire, démolir ; n. épave","détruire","a nervous wreck = une boule de nerfs ; shipwreck = naufrage"],
+["Wretch","n. misérable, malheureux","misérable",""],
+["Yummy","adj. délicieux, miam","délicieux",""]
 ];
 const W = DATA.map(([en,fr,mine,note],i)=>({i,en,fr,mine,note}));
+
+// Nature du mot : la traduction commence par « n. », « v. », « adj. »… (ex. « n. brouillon ; v. rédiger »).
+// Chaque partie est affichée avec une petite étiquette (nom, verbe, adj.…).
+const POS = {"n.":["nom","pn"],"v.":["verbe","pv"],"adj.":["adj.","pa"],"adv.":["adv.","pd"],"prép.":["prép.","po"],"conj.":["conj.","po"],"interj.":["interj.","po"],"expr.":["expr.","pe"]};
+const POS_RE = /^(n|v|adj|adv|prép|conj|interj|expr)\.\s+/;
+function frParts(s){
+  const g = [];
+  String(s||"").split(/\s*;\s*/).forEach(seg => {
+    const m = seg.match(POS_RE);
+    if (m || !g.length) g.push({p: m ? m[1]+"." : "", t: m ? seg.slice(m[0].length) : seg});
+    else g[g.length-1].t += " ; " + seg;
+  });
+  return g;
+}
+function frHtml(s, block){
+  const g = frParts(s);
+  if (!g.some(x => x.p)) return esc(s);
+  const one = x => (x.p ? `<span class="pos ${POS[x.p][1]}">${POS[x.p][0]}</span>` : "") + esc(x.t);
+  return block ? g.map(x => `<div class="posl">${one(x)}</div>`).join("") : g.map(one).join(" ");
+}
 
 // ---------- Progrès (système de boîtes : 0 = nouveau, 5 = maîtrisé) ----------
 const KEY = "vocab-progress-v1";
@@ -606,7 +633,7 @@ function detail(w){
   const showMine = w.mine && norm(w.mine)!==norm(w.fr);
   return `<div class="detail">
     <div><span class="en say" data-speak="${esc(w.en)}">${esc(w.en)}</span></div>
-    <div class="ans">${esc(w.fr)}</div>
+    <div class="ans">${frHtml(w.fr,true)}</div>
     ${w.note ? `<div class="note">${esc(w.note)}</div>` : ""}
     ${showMine ? `<div class="mine">Ta note : <em>${esc(w.mine)}</em></div>` : ""}
   </div>`;
@@ -624,7 +651,7 @@ function renderHome(){
     <div class="stamp" title="Ton niveau sur ce mot : ${lv}/5"><span>${"★".repeat(lv)}${"☆".repeat(5-lv)}</span><small>niveau</small></div>
     <div class="hero-k">Le mot du jour</div>
     <button class="hero-w" data-speak="${esc(wd.en)}" aria-label="Écouter ${esc(wd.en)}">${esc(wd.en)}<span class="spk">${ICON.speak}</span></button>
-    <div class="hero-fr">${esc(wd.fr)}</div>
+    <div class="hero-fr">${frHtml(wd.fr,true)}</div>
     ${wd.note ? `<div class="hero-note">${esc(wd.note)}</div>` : ""}
   </section>
 
@@ -668,7 +695,7 @@ function renderPlay(){
     </div>`;
   const tag = S.dir==="en" ? "Anglais → Français" : "Français → Anglais";
   const head = `<div class="dirtag">${tag}</div>
-    <div class="word ${S.dir==="fr"?"fr":"say"}"${S.dir==="en"?` data-speak="${esc(w.en)}"`:""}>${esc(prompt)}</div>
+    <div class="word ${S.dir==="fr"?"fr":"say"}"${S.dir==="en"?` data-speak="${esc(w.en)}"`:""}>${S.dir==="fr" ? frHtml(prompt) : esc(prompt)}</div>
     ${S.dir==="en" ? speakBtn(w.en) : ""}`;
 
   if (S.mode === "cards") {
@@ -688,7 +715,7 @@ function renderPlay(){
       const x = W[i]; const label = S.dir==="en" ? x.fr : x.en;
       let cls = "opt";
       if (S.answered){ if (i===w.i || sameAnswer(x,w,S.dir)) cls += " right"; else if (i===S.choice) cls += " wrong"; }
-      return `<button class="${cls}" data-opt="${i}" ${S.answered?"disabled":""}>${esc(label)}</button>`;
+      return `<button class="${cls}" data-opt="${i}" ${S.answered?"disabled":""}>${S.dir==="en" ? frHtml(label) : esc(label)}</button>`;
     }).join("");
     const ok = S.answered && (S.choice===w.i || sameAnswer(W[S.choice],w,S.dir));
     return top + `<section class="postcard card">${head}
@@ -725,7 +752,7 @@ function renderEnd(){
     ${r===t && t>0 ? `<div class="postmark good">Sans faute</div>` : ""}
     <div class="big">${r}/${t}</div>
     <p style="margin:8px 0 0" class="small">${r===t ? "Sans faute, bravo !" : "Les mots ratés reviendront plus souvent."}</p>
-    ${wrongWords.length ? `<div class="label">À retravailler</div><ul class="endlist">${wrongWords.map(w=>`<li><b class="say" data-speak="${esc(w.en)}">${esc(w.en)}</b> : ${esc(w.fr)}</li>`).join("")}</ul>` : ""}
+    ${wrongWords.length ? `<div class="label">À retravailler</div><ul class="endlist">${wrongWords.map(w=>`<li><b class="say" data-speak="${esc(w.en)}">${esc(w.en)}</b> : ${frHtml(w.fr)}</li>`).join("")}</ul>` : ""}
     <div style="display:grid;gap:10px;margin-top:18px">
       <button class="btn main" data-start="${S.mode}">Nouvelle série</button>
       <button class="btn ghost" data-home>Retour à l'accueil</button>
@@ -753,7 +780,7 @@ function renderList(){
     <div id="rows">${rows.length ? rows.map(w => {
       const r = rec(w); const lv = levelOf(r);
       const showMine = w.mine && norm(w.mine)!==norm(w.fr);
-      return `<div class="row"><div class="t"><b class="say" data-speak="${esc(w.en)}">${esc(w.en)}</b><div class="fr">${esc(w.fr)}</div>${showMine?`<div class="mn">Ta note : <em>${esc(w.mine)}</em></div>`:""}</div>
+      return `<div class="row"><div class="t"><b class="say" data-speak="${esc(w.en)}">${esc(w.en)}</b><div class="fr">${frHtml(w.fr)}</div>${showMine?`<div class="mn">Ta note : <em>${esc(w.mine)}</em></div>`:""}</div>
         <div class="dots" title="Niveau ${lv}/5">${[1,2,3,4,5].map(k=>`<i class="${k<=lv?"f":""}"></i>`).join("")}</div></div>`;
     }).join("") : `<div class="empty">Aucun mot ici.</div>`}</div>
     <div class="reset">
@@ -777,7 +804,7 @@ function renderTable(){
         const lv = rec(w).b;
         return `<tr><th scope="row"><span class="say" data-speak="${esc(w.en)}">${esc(w.en)}</span></th>${editIdx===w.i
           ? `<td class="mc"><form id="mineform" autocomplete="off"><input type="text" id="mineinput" data-i="${w.i}" value="${esc(w.mine)}" placeholder="Ta traduction…" autocapitalize="off" spellcheck="false"><button class="btn main sm" type="submit">OK</button></form></td>`
-          : `<td class="mc" data-edit="${w.i}">${w.mine ? esc(w.mine) : '<span class="ph">+ ajouter</span>'} <span class="pen">✎</span></td>`}<td>${esc(w.fr)}</td><td class="nt">${esc(w.note)}</td><td><div class="dots" title="Niveau ${lv}/5">${[1,2,3,4,5].map(k=>`<i class="${k<=lv?"f":""}"></i>`).join("")}</div></td></tr>`;
+          : `<td class="mc" data-edit="${w.i}">${w.mine ? esc(w.mine) : '<span class="ph">+ ajouter</span>'} <span class="pen">✎</span></td>`}<td>${frHtml(w.fr)}</td><td class="nt">${esc(w.note)}</td><td><div class="dots" title="Niveau ${lv}/5">${[1,2,3,4,5].map(k=>`<i class="${k<=lv?"f":""}"></i>`).join("")}</div></td></tr>`;
       }).join("") : `<tr><td colspan="5" class="empty">Aucun mot ici.</td></tr>`}</tbody>
     </table></div>
   </section>`;
