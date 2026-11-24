@@ -36,8 +36,8 @@
 "Nous avons passé un été insouciant au bord de la mer."
 ],
 "Casually": [
-"You can talk to me [casually].",
-"Tu peux me tutoyer."
+"He leaned [casually] against the wall.",
+"Il était nonchalamment appuyé contre le mur."
 ],
 "Clinch": [
 "They [clinched] the deal after hours of talks.",
@@ -76,8 +76,8 @@
 "J'ai écrit un premier brouillon de la lettre."
 ],
 "Dusk": [
-"I like doing stretching exercises at [dusk].",
-"J'aime faire des exercices d'étirement au crépuscule."
+"The streetlights come on at [dusk].",
+"Les lampadaires s'allument au crépuscule."
 ],
 "Engulf": [
 "The house was quickly [engulfed] in flames.",
@@ -404,16 +404,16 @@
 "J'ai mal à la gorge."
 ],
 "Sorrow": [
-"A shadow of [sorrow] flitted across her face.",
-"Une ombre de tristesse passa sur son visage."
+"Her eyes were full of [sorrow].",
+"Ses yeux étaient pleins de chagrin."
 ],
 "Sour": [
 "This milk has gone [sour].",
 "Ce lait a tourné."
 ],
 "Span": [
-"His attention [span] is that of a goldfish.",
-"La durée de son attention est celle d'un poisson rouge."
+"Children have a short attention [span].",
+"Les enfants ont une capacité d'attention limitée."
 ],
 "Statement": [
 "The minister made a [statement] to the press.",
