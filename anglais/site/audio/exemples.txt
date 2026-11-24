@@ -104,6 +104,7 @@ ex-soil	Tomatoes grow best in rich soil.
 ex-sore	I have a sore throat.
 ex-sorrow	Her eyes were full of sorrow.
 ex-sour	This milk has gone sour.
+ex-sow	Her speciality is sowing the seeds of discord.
 ex-span	Children have a short attention span.
 ex-statement	The minister made a statement to the press.
 ex-stay-put	Stay put, I'm coming to get you.
