@@ -3,6 +3,7 @@
 // Traduction et voix fournies par l'appli Android (objet AndroidApp).
 (function () {
   if (!window.AndroidApp) return;
+  const AJOUT_VERSION = "24/11 · 4";   // affichée en bas de « + Ajouter » : dit quelle version tourne
 
   const AKEY = "vocab-added-v1";
   const key = s => String(s || "").toLowerCase().replace(/\s+/g, " ").trim();
@@ -109,6 +110,7 @@
       </div>
       ${F.msg ? `<div class="addmsg ${F.ok ? "ok" : "ko"}">${esc(F.msg)}</div>` : ""}
       ${voiceLine()}
+      <div class="small" style="margin-top:8px;opacity:.6">Version de la page : ${AJOUT_VERSION}</div>
     </section>
     <section class="panel">
       <div class="label" style="margin-top:0">Ajoutés sur le téléphone (${added.length})</div>
@@ -172,7 +174,7 @@
     interjection: ["interj.", w => w + "!", t => t.replace(/\s*!$/, "")],
   };
   async function mm(q) {
-    const r = await fetch("https://api.mymemory.translated.net/get?langpair=en%7Cfr&q=" + encodeURIComponent(q));
+    const r = await fetchT("https://api.mymemory.translated.net/get?langpair=en%7Cfr&q=" + encodeURIComponent(q));
     const j = await r.json();
     return String((j.responseData && j.responseData.translatedText) || "");
   }
@@ -206,9 +208,14 @@
     }
     return { out, subpage };
   }
+  // fetch avec limite de temps : sans réponse au bout de 7 s, on passe à la suite.
+  function fetchT(u, ms) {
+    const c = new AbortController(); const t = setTimeout(() => c.abort(), ms || 7000);
+    return fetch(u, { signal: c.signal }).finally(() => clearTimeout(t));
+  }
   async function wkFetch(title) {
     const u = "https://en.wiktionary.org/w/api.php?action=parse&format=json&formatversion=2&prop=wikitext&redirects=1&origin=*&page=" + encodeURIComponent(title);
-    const r = await fetch(u); if (!r.ok) return null;
+    const r = await fetchT(u); if (!r.ok) return null;
     const j = await r.json();
     return j && j.parse && typeof j.parse.wikitext === "string" ? j.parse.wikitext : null;
   }
@@ -219,7 +226,7 @@
     let reached = false, found = false;
     for (const t of titles) {
       let txt = null;
-      try { txt = await wkFetch(t); reached = true; } catch (e) { F.wk = "Wiktionary injoignable (" + (e && e.message || "erreur") + ")."; }
+      try { txt = await wkFetch(t); reached = true; } catch (e) { F.wk = "Wiktionary injoignable (" + (e && e.name === "AbortError" ? "pas de réponse en 7 s" : (e && e.message || "erreur")) + ")."; break; }
       if (!txt || !/==\s*English\s*==/.test(txt)) continue;
       found = true;
       const { out, subpage } = wkParse(txt);
@@ -251,7 +258,8 @@
 
   async function posSuggest(en, id) {
     let groups = null;
-    try { groups = await wiktionary(en); } catch (e) {}
+    try { groups = await wiktionary(en); } catch (e) { F.wk = "Erreur : " + (e && e.message); }
+    if (id === reqId && /^Recherche/.test(F.wk)) F.wk = "";
     if (id !== reqId) return;
     if (groups) {
       readForm(); setCands(groups);
@@ -279,7 +287,7 @@
     const done = () => { if (id === reqId && view === "add") render(); };
     let kinds = [];
     try {
-      const r = await fetch("https://api.dictionaryapi.dev/api/v2/entries/en/" + encodeURIComponent(en.toLowerCase()));
+      const r = await fetchT("https://api.dictionaryapi.dev/api/v2/entries/en/" + encodeURIComponent(en.toLowerCase()));
       if (!r.ok) return done();
       const d = await r.json();
       d.forEach(e => (e.meanings || []).forEach(m => { if (CUES[m.partOfSpeech] && !kinds.includes(m.partOfSpeech)) kinds.push(m.partOfSpeech); }));
@@ -307,7 +315,7 @@
     readForm();
     const en = F.en.trim();
     if (!en) return;
-    F.busy = true; F.alts = []; F.cands = []; F.wk = ""; F.msg = ""; reqId++;
+    F.busy = true; F.alts = []; F.cands = []; F.wk = "Recherche des sens par nature sur Wiktionary…"; F.msg = ""; reqId++;
     render();
     try { AndroidApp.translate(reqId, en); } catch (e) { F.busy = false; render(); }
     posSuggest(en, reqId);

@@ -539,7 +539,14 @@ function speakEl(url, t){
 let AV = {};
 function loadAV(){ fetch("audio/versions.json").then(r => r.ok ? r.json() : {}).then(d => { if (d && Object.keys(d).length) AV = d; }).catch(() => {}); }
 loadAV();
-document.addEventListener("visibilitychange", () => { if (!document.hidden) loadAV(); });
+// Retour dans l'appli après plus de 10 minutes : on recharge la page (nouveaux mots, nouvelle version),
+// sauf pendant une série d'exercices ou une saisie.
+let hiddenAt = 0;
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) { hiddenAt = Date.now(); return; }
+  loadAV();
+  if (hiddenAt && Date.now() - hiddenAt > 10*60*1000 && view !== "play" && !(document.activeElement && /INPUT|TEXTAREA/.test(document.activeElement.tagName) && document.activeElement.value)) location.reload();
+});
 function audioUrl(name){ return "audio/" + name + ".mp3?v=" + (AV[name] || "5"); }
 function speak(t){
   const url = audioUrl(audioSlug(t));
