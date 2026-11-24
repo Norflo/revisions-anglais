@@ -80,7 +80,7 @@
   `;
   document.head.appendChild(st);
 
-  const F = { en: "", fr: "", mine: "", note: "", alts: [], cands: [], busy: false, msg: "", ok: true };
+  const F = { en: "", fr: "", mine: "", note: "", alts: [], cands: [], wk: "", busy: false, msg: "", ok: true };
 
   function renderAdd() {
     const mineList = added.slice().sort((a, b) => a.en.localeCompare(b.en, "en", { sensitivity: "base" }));
@@ -95,6 +95,7 @@
         ${F.alts.length ? `<div class="label">Autre traduction (sans nature)</div><div class="sugg">${F.alts.map((a, k) => `<button data-alt="${k}" class="${key(a) === key(F.fr) ? "on" : ""}">${frHtml(a)}</button>`).join("")}</div>` : ""}`
       : F.alts.length ? `<div class="label">Propositions (touche pour choisir)</div>
         <div class="sugg">${F.alts.map((a, k) => `<button data-alt="${k}" class="${key(a) === key(F.fr) ? "on" : ""}">${frHtml(a)}</button>`).join("")}</div>` : ""}
+      ${F.wk ? `<div class="small" style="margin:-4px 0 6px">${esc(F.wk)}</div>` : ""}
       <div class="label">Traduction</div>
       <textarea id="a-fr" rows="2" placeholder="ex. : n. brouillon ; v. rédiger">${esc(F.fr)}</textarea>
       <div class="small" style="margin:-4px 0 10px">Pour préciser la nature : n. (nom), v. (verbe), adj., adv., prép., expr., séparés par « ; ».</div>
@@ -211,20 +212,26 @@
     const j = await r.json();
     return j && j.parse && typeof j.parse.wikitext === "string" ? j.parse.wikitext : null;
   }
+  // F.wk = ce qui s'est passé (affiché sous les propositions, pour comprendre quand ça ne marche pas).
   async function wiktionary(en) {
     const base = en.trim().replace(/[!?.]+$/, "");
     const titles = [base.toLowerCase()]; if (base !== base.toLowerCase()) titles.push(base);
+    let reached = false, found = false;
     for (const t of titles) {
-      let txt = null; try { txt = await wkFetch(t); } catch (e) {}
+      let txt = null;
+      try { txt = await wkFetch(t); reached = true; } catch (e) { F.wk = "Wiktionary injoignable (" + (e && e.message || "erreur") + ")."; }
       if (!txt || !/==\s*English\s*==/.test(txt)) continue;
+      found = true;
       const { out, subpage } = wkParse(txt);
       if (subpage.length) {
         let sub = null; try { sub = await wkFetch(t + "/translations"); } catch (e) {}
         if (sub) { const r2 = wkParse(sub).out; for (const k in r2) { out[k] = (out[k] || []).concat(r2[k].filter(w => !(out[k] || []).some(x => key(x) === key(w)))); } }
       }
       const groups = POS_ORDER.filter(p => out[p] && out[p].length).map(p => ({ tag: p, words: out[p].slice(0, 6) }));
-      if (groups.length) return groups;
+      if (groups.length) { F.wk = "Sens trouvés sur Wiktionary."; return groups; }
     }
+    if (reached) F.wk = found ? `Wiktionary connaît « ${base} » mais ne donne pas de traduction française.`
+                              : `« ${base} » n'est pas dans Wiktionary.`;
     return null;
   }
 
@@ -252,15 +259,32 @@
       if (view === "add") render();
       return;
     }
-    if (/\s/.test(en)) return;   // expressions : pas dans le dictionnaire mot à mot
+    if (/\s/.test(en)) {
+      // Expression absente de Wiktionary : verbe à particule (« lay out » → « to lay out ») ou expression.
+      const phr = !/^(i|you|he|she|it|we|they|i'm|i've|it's|the|a|an|my|your|his|her|our|their|this|that|what|how|why|who|don't|can't)\b/i.test(en.trim());
+      const q = phr ? "to " + en.trim().toLowerCase() : en.trim();
+      let t = "";
+      try { t = (await mm(q)).trim().replace(/[.!]$/, "").replace(/^(de |d'|d’)/i, "").trim(); } catch (e) {}
+      if (id !== reqId) return;
+      if (t && key(t) !== key(q) && key(t) !== key(en)) {
+        t = t.charAt(0).toLowerCase() + t.slice(1);
+        readForm(); setCands([{ tag: phr ? "v." : "expr.", words: t.split(/\s*[,;]\s*/).filter(Boolean).slice(0, 4) }]);
+        F.cands.forEach(c => { c.on = true; });
+        F.fr = buildFr();
+        F.wk += phr ? " Traduit comme un verbe (« " + q + " »)." : " Traduit comme une expression.";
+      }
+      if (view === "add") render();
+      return;
+    }
+    const done = () => { if (id === reqId && view === "add") render(); };
     let kinds = [];
     try {
       const r = await fetch("https://api.dictionaryapi.dev/api/v2/entries/en/" + encodeURIComponent(en.toLowerCase()));
-      if (!r.ok) return;
+      if (!r.ok) return done();
       const d = await r.json();
       d.forEach(e => (e.meanings || []).forEach(m => { if (CUES[m.partOfSpeech] && !kinds.includes(m.partOfSpeech)) kinds.push(m.partOfSpeech); }));
-    } catch (e) { return; }
-    if (!kinds.length) return;
+    } catch (e) { return done(); }
+    if (!kinds.length) return done();
     const parts = [];
     for (const k of kinds.slice(0, 4)) {
       const [tag, cue, clean] = CUES[k];
@@ -270,8 +294,10 @@
       t = t.charAt(0).toLowerCase() + t.slice(1);
       if (!parts.some(p => key(p.slice(p.indexOf(" ") + 1)) === key(t))) parts.push(tag + " " + t);
     }
-    if (id !== reqId || !parts.length) return;
+    if (id !== reqId) return;
+    if (!parts.length) return done();
     const full = parts.join(" ; ");
+    F.wk += " Natures trouvées avec un autre dictionnaire : à vérifier.";
     F.alts = [full].concat(parts.length > 1 ? parts : [], F.alts.filter(a => !POS_RE.test(a)));
     readForm(); F.fr = full;
     if (view === "add") render();
@@ -281,7 +307,7 @@
     readForm();
     const en = F.en.trim();
     if (!en) return;
-    F.busy = true; F.alts = []; F.cands = []; F.msg = ""; reqId++;
+    F.busy = true; F.alts = []; F.cands = []; F.wk = ""; F.msg = ""; reqId++;
     render();
     try { AndroidApp.translate(reqId, en); } catch (e) { F.busy = false; render(); }
     posSuggest(en, reqId);
@@ -301,7 +327,7 @@
     saveAdded();
     try { AndroidApp.synth(word, audioSlug(word)); } catch (e) {}
     S = null; rebuild();
-    Object.assign(F, { en: "", fr: "", mine: "", note: "", alts: [], cands: [], msg: `« ${word} » ajouté à tes mots.`, ok: true });
+    Object.assign(F, { en: "", fr: "", mine: "", note: "", alts: [], cands: [], wk: "", msg: `« ${word} » ajouté à tes mots.`, ok: true });
     render();
     sync(false);
   }
