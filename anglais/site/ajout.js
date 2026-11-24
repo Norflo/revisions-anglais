@@ -436,7 +436,7 @@
   function plain(w) { return EX[w.en][0].replace(/[\[\]]/g, ""); }
 
   function playSentence(w) {
-    const url = "audio/ex-" + audioSlug(w.en) + ".mp3?v=5";
+    const url = audioUrl("ex-" + audioSlug(w.en));
     const text = plain(w);
     const ctx = getCtx();
     if (!ctx) return speakEl(url, text);

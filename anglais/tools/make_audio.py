@@ -9,6 +9,7 @@
 Usage : python3 make_audio.py anglais/site
 """
 import asyncio
+import hashlib
 import json
 import pathlib
 import re
@@ -109,6 +110,11 @@ async def main():
     await asyncio.gather(*(make(t, sem, n) for t, n in todo))
     stamp_ex.write_text("".join(f"ex-{slug(w)}\t{s}\n" for w, s in ex.items()), encoding="utf-8")
     STAMP.write_text(VOICE + "\n")
+    # versions.json : une empreinte par son. L'appli l'ajoute à l'adresse du son (?v=…) :
+    # un son refait sous le même nom (phrase changée, nouvelle voix) n'est plus confondu avec l'ancien.
+    vers = {f.stem: hashlib.md5(f.read_bytes()).hexdigest()[:8] for f in sorted(AUDIO.glob("*.mp3"))}
+    (AUDIO / "versions.json").write_text(
+        "{\n" + ",\n".join(f'"{k}": "{v}"' for k, v in vers.items()) + "\n}\n", encoding="utf-8")
 
 
 asyncio.run(main())

@@ -533,8 +533,13 @@ function speakEl(url, t){
     if (p && p.catch) p.catch(() => ttsFallback(t));
   } catch (e) { ttsFallback(t); }
 }
+// Versions des sons (audio/versions.json, écrit par le workflow) : un son refait change d'adresse,
+// donc le téléphone ne rejoue pas l'ancien.
+let AV = {};
+fetch("audio/versions.json").then(r => r.ok ? r.json() : {}).then(d => { AV = d || {}; }).catch(() => {});
+function audioUrl(name){ return "audio/" + name + ".mp3?v=" + (AV[name] || "5"); }
 function speak(t){
-  const url = "audio/" + audioSlug(t) + ".mp3?v=5";
+  const url = audioUrl(audioSlug(t));
   const ctx = getCtx();
   if (!ctx) return speakEl(url, t);
   try { if (ctx.state !== "running") ctx.resume(); } catch (e) {}
