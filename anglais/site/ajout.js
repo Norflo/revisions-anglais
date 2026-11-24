@@ -3,7 +3,7 @@
 // Traduction et voix fournies par l'appli Android (objet AndroidApp).
 (function () {
   if (!window.AndroidApp) return;
-  const AJOUT_VERSION = "24/11 · 4";   // affichée en bas de « + Ajouter » : dit quelle version tourne
+  const AJOUT_VERSION = "24/11 · 5";   // affichée en bas de « + Ajouter » : dit quelle version tourne
 
   const AKEY = "vocab-added-v1";
   const key = s => String(s || "").toLowerCase().replace(/\s+/g, " ").trim();
@@ -27,12 +27,29 @@
   });
   if (added.length !== before) saveAdded();
 
+  // Traductions remplacées depuis l'appli (mot déjà dans la liste) : affichées tout de suite,
+  // puis écrites dans DATA sur GitHub. Effacées quand DATA a reçu la nouvelle traduction.
+  const UKEY = "vocab-updates-v1";
+  let updates = [];
+  try { updates = JSON.parse(localStorage.getItem(UKEY)) || []; } catch (e) { updates = []; }
+  const saveUpd = () => { try { localStorage.setItem(UKEY, JSON.stringify(updates)); } catch (e) {} };
+  {
+    const dataFr = new Map(DATA.map(d => [key(d[0]), d[1]]));
+    const n = updates.length;
+    updates = updates.filter(u => !(dataFr.has(key(u.en)) && key(dataFr.get(key(u.en))) === key(u.fr)));
+    if (updates.length !== n) saveUpd();
+  }
+
   function rebuild() {
     // W = mots officiels + mots ajoutés ici, par ordre alphabétique (w.i = position dans W).
     const base = personal ? [] : SHARED;
     const sharedKeys = new Set(base.map(w => key(w.en)));
     const extra = added.filter(a => !sharedKeys.has(key(a.en))).map(a => ({ en: a.en, fr: a.fr, mine: a.mine || "", mine0: a.mine || "", note: a.note || "", local: true }));
     const all = base.concat(extra).sort((a, b) => a.en.localeCompare(b.en, "en", { sensitivity: "base" }));
+    for (const u of updates) {
+      const w = all.find(x => key(x.en) === key(u.en));
+      if (w) { w.fr = u.fr; if (u.note) w.note = u.note; }
+    }
     W.length = 0;
     all.forEach((w, i) => { w.i = i; W.push(w); });
     applyMine();
@@ -77,11 +94,13 @@
     .addmsg.ok{color:var(--good)} .addmsg.ko{color:var(--bad)}
     .two{display:flex;gap:8px} .two .btn{flex:1}
     .loc{display:inline-block;font-size:.72rem;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:1px 8px;margin-left:6px;vertical-align:middle}
+    .dupbox{margin:4px 0 8px;padding:10px 14px;border-radius:16px;background:var(--accent-soft)}
+    .dupbox .fr{margin-top:2px}
     .del{border:0;background:none;color:var(--muted);font-size:1.1rem;padding:4px 8px}
   `;
   document.head.appendChild(st);
 
-  const F = { en: "", fr: "", mine: "", note: "", alts: [], cands: [], wk: "", busy: false, msg: "", ok: true };
+  const F = { en: "", fr: "", mine: "", note: "", alts: [], cands: [], wk: "", dup: null, busy: false, msg: "", ok: true };
 
   function renderAdd() {
     const mineList = added.slice().sort((a, b) => a.en.localeCompare(b.en, "en", { sensitivity: "base" }));
@@ -104,9 +123,10 @@
       <input type="text" id="a-mine" value="${esc(F.mine)}" placeholder="ta propre traduction">
       <div class="label">Remarque (facultatif)</div>
       <input type="text" id="a-note" value="${esc(F.note)}" placeholder="exemple, autre sens…">
+      ${F.dup ? `<div class="dupbox"><b>« ${esc(F.dup.en)} » est déjà dans tes mots.</b><div class="small" style="margin-top:4px">Traduction actuelle :</div><div class="fr">${frHtml(F.dup.fr)}</div></div>` : ""}
       <div class="two" style="margin-top:6px">
         <button class="btn ghost" data-a-listen>🔊 Écouter</button>
-        <button class="btn main" data-a-save>Ajouter à mes mots</button>
+        ${F.dup ? `<button class="btn main" data-a-replace>Remplacer la traduction</button>` : `<button class="btn main" data-a-save>Ajouter à mes mots</button>`}
       </div>
       ${F.msg ? `<div class="addmsg ${F.ok ? "ok" : "ko"}">${esc(F.msg)}</div>` : ""}
       ${voiceLine()}
@@ -117,7 +137,7 @@
       ${mineList.length ? mineList.map(a => `<div class="row"><div class="t"><b class="say" data-speak="${esc(a.en)}">${esc(a.en)}</b>${a.gh ? `<span class="loc">✓ GitHub</span>` : ""}<div class="fr">${frHtml(a.fr)}</div>${a.mine ? `<div class="mn">Ta traduction : <em>${esc(a.mine)}</em></div>` : ""}</div>
           <button class="del" data-a-del="${esc(a.en)}" aria-label="Supprimer">✕</button></div>`).join("")
         : `<div class="empty">Aucun mot ajouté ici pour l'instant.</div>`}
-      ${token && pending().length ? `<button class="btn ghost" data-g-sync style="margin-top:12px" ${G.busy ? "disabled" : ""}>${G.busy ? "Envoi…" : "Envoyer sur GitHub"}</button>` : ""}
+      ${token && (pending().length || pendingUpd().length) ? `<button class="btn ghost" data-g-sync style="margin-top:12px" ${G.busy ? "disabled" : ""}>${G.busy ? "Envoi…" : "Envoyer sur GitHub"}</button>` : ""}
     </section>
     ${renderGitHub()}`;
   }
@@ -316,6 +336,7 @@
     const en = F.en.trim();
     if (!en) return;
     F.busy = true; F.alts = []; F.cands = []; F.wk = "Recherche des sens par nature sur Wiktionary…"; F.msg = ""; reqId++;
+    F.dup = W.find(w => key(w.en) === key(en)) || null;
     render();
     try { AndroidApp.translate(reqId, en); } catch (e) { F.busy = false; render(); }
     posSuggest(en, reqId);
@@ -323,24 +344,50 @@
 
   function exists(en) { return W.some(w => key(w.en) === key(en)); }
 
+  // Remplace la traduction d'un mot déjà dans la liste.
+  function replace() {
+    readForm();
+    const w = F.dup; const fr = F.fr.trim();
+    if (!w || !fr) return;
+    const a = added.find(x => key(x.en) === key(w.en));
+    if (a && !a.gh) {   // mot ajouté ici, pas encore sur GitHub : on corrige simplement sa fiche
+      a.fr = fr; if (F.note.trim()) a.note = F.note.trim(); saveAdded();
+    } else {
+      updates = updates.filter(u => key(u.en) !== key(w.en));
+      updates.push({ en: w.en, fr, note: F.note.trim(), t: Date.now() }); saveUpd();
+    }
+    S = null; rebuild();
+    if (F.mine.trim()) { const w2 = W.find(x => key(x.en) === key(w.en)); if (w2) setMine(w2, F.mine); }
+    const name = w.en;
+    Object.assign(F, { en: "", fr: "", mine: "", note: "", alts: [], cands: [], wk: "", dup: null, msg: `Traduction de « ${name} » remplacée.`, ok: true });
+    render();
+    sync(false);
+  }
+
   function save() {
     readForm();
     const en = F.en.trim().replace(/\s+/g, " ");
     const fr = F.fr.trim();
     if (!en) { F.msg = "Écris d'abord le mot anglais."; F.ok = false; return render(); }
     if (!fr && !F.mine.trim()) { F.msg = "Ajoute une traduction."; F.ok = false; return render(); }
-    if (exists(en)) { F.msg = `« ${en} » est déjà dans tes mots.`; F.ok = false; return render(); }
+    if (exists(en)) { F.dup = W.find(w => key(w.en) === key(en)); F.msg = ""; return render(); }
     const word = en.charAt(0).toUpperCase() + en.slice(1);
     added.push({ en: word, fr: fr || F.mine.trim(), mine: F.mine.trim(), note: F.note.trim(), t: Date.now() });
     saveAdded();
     try { AndroidApp.synth(word, audioSlug(word)); } catch (e) {}
     S = null; rebuild();
-    Object.assign(F, { en: "", fr: "", mine: "", note: "", alts: [], cands: [], wk: "", msg: `« ${word} » ajouté à tes mots.`, ok: true });
+    Object.assign(F, { en: "", fr: "", mine: "", note: "", alts: [], cands: [], wk: "", dup: null, msg: `« ${word} » ajouté à tes mots.`, ok: true });
     render();
     sync(false);
   }
 
 
+  $app.addEventListener("input", e => {
+    if (view === "add" && e.target.id === "a-en" && F.dup && key(e.target.value) !== key(F.dup.en)) {
+      readForm(); F.dup = null; render();
+      const el = document.getElementById("a-en"); if (el) { el.focus(); const n = el.value.length; el.setSelectionRange(n, n); }
+    }
+  });
   $app.addEventListener("submit", e => {
     if (e.target.id !== "trform") return;
     e.preventDefault(); translate();
@@ -352,6 +399,7 @@
     if (t.dataset.cand !== undefined) { readForm(); const c = F.cands[+t.dataset.cand]; c.on = !c.on; F.fr = buildFr(); render(); return; }
     if (t.dataset.aListen !== undefined) { readForm(); if (F.en.trim()) AndroidApp.speak(F.en.trim()); return; }
     if (t.dataset.aSave !== undefined) { save(); return; }
+    if (t.dataset.aReplace !== undefined) { replace(); return; }
     if (t.dataset.gSync !== undefined) { sync(false); return; }
     if (t.dataset.gEdit !== undefined) { G.edit = true; G.msg = ""; render(); return; }
     if (t.dataset.gCancel !== undefined) { G.edit = false; G.msg = ""; render(); return; }
@@ -383,6 +431,7 @@
   let token = ""; try { token = localStorage.getItem(TKEY) || ""; } catch (e) {}
   const G = { busy: false, msg: "", ok: true, edit: false };
   const pending = () => added.filter(a => !a.gh);
+  const pendingUpd = () => updates.filter(u => !u.gh);
 
   const b64dec = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\s/g, "")), c => c.charCodeAt(0)));
   function b64enc(s) {
@@ -402,7 +451,7 @@
   }
 
   // Ajoute les mots dans DATA, à leur place alphabétique, sans toucher aux autres lignes.
-  function insertWords(html, words) {
+  function insertWords(html, words, upds) {
     const m = html.match(/const DATA = \[\n([\s\S]*?)\n\];/);
     if (!m) throw new Error("liste DATA introuvable");
     const rows = m[1].split("\n").map(l => l.replace(/,\s*$/, ""));
@@ -415,8 +464,17 @@
       if (k < 0) k = rows.length;
       rows.splice(k, 0, line); have.add(key(a.en)); done.push(a); fresh++;
     }
+    // Traductions remplacées : on change la 2e colonne (et la remarque si elle est donnée).
+    const changed = [];
+    for (const u of (upds || [])) {
+      const k = rows.findIndex(l => key(JSON.parse(l)[0]) === key(u.en));
+      if (k < 0) continue;
+      const r = JSON.parse(rows[k]);
+      if (r[1] !== u.fr || (u.note && r[3] !== u.note)) { r[1] = u.fr; if (u.note) r[3] = u.note; rows[k] = JSON.stringify(r); fresh++; }
+      changed.push(u);
+    }
     const out = html.slice(0, m.index) + "const DATA = [\n" + rows.join(",\n") + "\n];" + html.slice(m.index + m[0].length);
-    return { html: out, done, fresh };
+    return { html: out, done, fresh, changed };
   }
 
   function ghError(e) {
@@ -427,24 +485,27 @@
   }
 
   async function sync(quiet) {
-    const words = pending();
-    if (!token || G.busy || !words.length) return;
+    const words = pending(), upds = pendingUpd();
+    if (!token || G.busy || !(words.length || upds.length)) return;
     G.busy = true; if (view === "add") render();
     try {
       let res;
       for (let essai = 0; ; essai++) {
         const f = await gh("GET", token);
-        res = insertWords(b64dec(f.content), words);
+        res = insertWords(b64dec(f.content), words, upds);
         if (!res.fresh) break;
-        const names = words.map(a => a.en).join(", ");
+        const parts = [];
+        if (words.length) parts.push("ajout de " + words.map(a => a.en).join(", "));
+        if (upds.length) parts.push("traduction de " + upds.map(u => u.en).join(", ") + " remplacée");
         try {
-          await gh("PUT", token, { message: `Anglais : ajout de ${names} (depuis l'appli)`, content: b64enc(res.html), sha: f.sha, branch: "main" });
+          await gh("PUT", token, { message: `Anglais : ${parts.join(" ; ")} (depuis l'appli)`, content: b64enc(res.html), sha: f.sha, branch: "main" });
           break;
         } catch (e) { if (essai >= 2 || (e.status !== 409 && e.status !== 422)) throw e; }
       }
       res.done.forEach(a => { a.gh = true; }); saveAdded();
+      res.changed.forEach(u => { u.gh = true; }); saveUpd();
       G.ok = true;
-      G.msg = `Enregistré sur GitHub : ${res.done.map(a => a.en).join(", ")}. La phrase d'exemple et la voix Ava arrivent d'ici quelques minutes.`;
+      G.msg = `Enregistré sur GitHub : ${res.done.concat(res.changed).map(a => a.en).join(", ")}.` + (res.done.length ? " La phrase d'exemple et la voix Ava arrivent d'ici quelques minutes." : "");
       if (view === "add" && F.ok) F.msg = "";
     } catch (e) {
       G.ok = false; G.msg = ghError(e);
