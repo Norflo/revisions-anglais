@@ -1,0 +1,50 @@
+# Appli « Révisions d'anglais » : sons Ava des 3000 mots les plus courants (anglais/site/top3000.json)
+# dans anglais/site/audio3000/ (hors de l'APK : l'appli les télécharge quand on touche un mot).
+# Ne fabrique que les sons manquants ; le premier passage (3000 sons) prend une quinzaine de minutes.
+name: Révisions d'anglais - sons des 3000 mots
+
+on:
+  push:
+    branches: [main]
+    paths: ["anglais/site/top3000.json", "anglais/tools/make_audio.py", "anglais/tools/voice.txt", ".github/workflows/anglais-audio3000.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: anglais-audio3000
+  cancel-in-progress: false
+
+jobs:
+  audio:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-edge-tts-wordfreq
+
+      - name: Outils
+        run: |
+          if ! command -v ffmpeg >/dev/null; then
+            timeout 90 sudo apt-get install -y -qq --no-install-recommends ffmpeg >/dev/null 2>&1 \
+              || { timeout 120 sudo apt-get update -qq -o Acquire::http::Timeout=15 -o Acquire::Retries=2; sudo apt-get install -y -qq --no-install-recommends ffmpeg >/dev/null; }
+          fi
+          pip install -q --disable-pip-version-check edge-tts
+
+      - name: Fabrication des sons
+        run: python3 anglais/tools/make_audio.py anglais/site --top
+
+      - name: Enregistrement dans le dépôt
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git add anglais/site/audio3000
+          if git diff --cached --quiet; then echo "Rien de nouveau."; exit 0; fi
+          git commit -q -m "Anglais : sons Ava des 3000 mots courants"
+          for i in 1 2 3 4; do git pull --rebase -q && git push && exit 0; sleep 5; done
+          exit 1

@@ -6,7 +6,8 @@
 - Nettoyage : silences et petits bruits de début/fin retirés, fondu très court (pas de clic),
   0,3 s de silence avant et après (sinon le début est coupé sur Android), volume égalisé.
 
-Usage : python3 make_audio.py anglais/site
+Usage : python3 make_audio.py anglais/site          (mots de DATA + phrases d'exemple → audio/)
+        python3 make_audio.py anglais/site --top    (3000 mots courants, top3000.json → audio3000/)
 """
 import asyncio
 import hashlib
@@ -19,7 +20,8 @@ import sys
 import edge_tts
 
 SITE = pathlib.Path(sys.argv[1])
-AUDIO = SITE / "audio"
+TOP = "--top" in sys.argv[2:]
+AUDIO = SITE / ("audio3000" if TOP else "audio")
 TOOLS = pathlib.Path(__file__).resolve().parent
 VOICE = (TOOLS / "voice.txt").read_text().strip()
 STAMP = AUDIO / "voice.txt"
@@ -30,6 +32,8 @@ def slug(s):
 
 
 def words():
+    if TOP:
+        return [d[0] for d in json.loads((SITE / "top3000.json").read_text(encoding="utf-8"))]
     html = (SITE / "index.html").read_text(encoding="utf-8")
     m = re.search(r"const DATA = \[(.*?)\n\];", html, re.S)
     return [d[0] for d in json.loads("[" + m.group(1) + "]")]
@@ -63,7 +67,7 @@ def clean(raw, out):
 
 def examples():
     f = SITE / "exemples.json"
-    if not f.exists():
+    if TOP or not f.exists():
         return {}
     return {w: v[0].replace("[", "").replace("]", "") for w, v in json.loads(f.read_text(encoding="utf-8")).items()}
 
@@ -106,10 +110,16 @@ async def main():
         if redo_all or done.get(name) != sentence or not (AUDIO / f"{name}.mp3").exists():
             todo.append((sentence, name))
     print(f"Voix {VOICE} — {len(todo)} son(s) à fabriquer" + (" (tous)" if redo_all else ""))
-    sem = asyncio.Semaphore(4)
-    await asyncio.gather(*(make(t, sem, n) for t, n in todo))
-    stamp_ex.write_text("".join(f"ex-{slug(w)}\t{s}\n" for w, s in ex.items()), encoding="utf-8")
-    STAMP.write_text(VOICE + "\n")
+    sem = asyncio.Semaphore(8 if TOP else 4)
+    # Un son qui échoue (réseau) n'arrête pas les autres : il sera refait au prochain passage.
+    res = await asyncio.gather(*(make(t, sem, n) for t, n in todo), return_exceptions=True)
+    bad = [n for (t, n), r in zip(todo, res) if isinstance(r, Exception)]
+    if bad:
+        print(f"{len(bad)} son(s) en échec, refaits au prochain passage : {', '.join(bad[:20])}")
+    if not TOP:
+        stamp_ex.write_text("".join(f"ex-{slug(w)}\t{s}\n" for w, s in ex.items()), encoding="utf-8")
+    if not bad or TOP:
+        STAMP.write_text(VOICE + "\n")
     # versions.json : une empreinte par son. L'appli l'ajoute à l'adresse du son (?v=…) :
     # un son refait sous le même nom (phrase changée, nouvelle voix) n'est plus confondu avec l'ancien.
     vers = {f.stem: hashlib.md5(f.read_bytes()).hexdigest()[:8] for f in sorted(AUDIO.glob("*.mp3"))}

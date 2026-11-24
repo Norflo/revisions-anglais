@@ -561,10 +561,17 @@ loadAV();
 let hiddenAt = 0;
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) { hiddenAt = Date.now(); return; }
-  loadAV();
+  loadAV(); loadAV3();
   if (hiddenAt && Date.now() - hiddenAt > 10*60*1000 && view !== "play" && !(document.activeElement && /INPUT|TEXTAREA/.test(document.activeElement.tagName) && document.activeElement.value)) location.reload();
 });
-function audioUrl(name){ return "audio/" + name + ".mp3?v=" + (AV[name] || "5"); }
+// Sons des 3000 mots courants : dossier audio3000/ (si le mot n'a pas son propre son dans audio/).
+let AV3 = {};
+function loadAV3(){ fetch("audio3000/versions.json").then(r => r.ok ? r.json() : {}).then(d => { if (d && Object.keys(d).length) AV3 = d; }).catch(() => {}); }
+loadAV3();
+function audioUrl(name){
+  if (!AV[name] && AV3[name]) return "audio3000/" + name + ".mp3?v=" + AV3[name];
+  return "audio/" + name + ".mp3?v=" + (AV[name] || "5");
+}
 function speak(t){
   const url = audioUrl(audioSlug(t));
   const ctx = getCtx();

@@ -37,6 +37,8 @@ Appli Android de révision du vocabulaire anglais, rangée ici à part de Radar 
   Classement : fréquences wordfreq, formes regroupées (was, been → be ; ground et left gardés à part), noms
   propres et doublons UK/US retirés ; traductions écrites par Claude. Étiquettes en plus : `pron.`, `art.`,
   `dét.`, `num.`.
+- `site/audio3000/` : sons Ava des 3000 mots courants (workflow « Révisions d'anglais - sons des 3000 mots »,
+  `make_audio.py --top`). Hors de l'APK (≈ 50 Mo) : l'appli télécharge un son quand on touche le mot.
 - `android/` : l'appli Android (WebView). Un changement dans `android/` refait l'APK
   (workflow « Révisions d'anglais - APK »). La page et les sons sont aussi copiés dans l'APK
   pour marcher hors connexion.

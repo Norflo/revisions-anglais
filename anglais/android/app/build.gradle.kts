@@ -42,6 +42,11 @@ android {
         getByName("main").assets.srcDirs("../../site")
     }
 
+    // Les sons des 3000 mots (≈ 50 Mo) restent hors de l'APK : téléchargés quand on touche un mot.
+    androidResources {
+        ignoreAssetsPattern = "!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~:!audio3000"
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
