@@ -12,13 +12,15 @@ on:
 permissions:
   contents: write
 
+# Un nouveau passage annule l'ancien (chaque passage refait tout ce qui manque : rien n'est perdu).
 concurrency:
   group: anglais-audio
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   audio:
     runs-on: ubuntu-latest
+    timeout-minutes: 6
     steps:
       - uses: actions/checkout@v5
 
@@ -32,8 +34,8 @@ jobs:
       - name: Outils
         run: |
           if ! command -v ffmpeg >/dev/null; then
-            sudo apt-get install -y -qq --no-install-recommends ffmpeg >/dev/null 2>&1 \
-              || { sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends ffmpeg >/dev/null; }
+            timeout 90 sudo apt-get install -y -qq --no-install-recommends ffmpeg >/dev/null 2>&1 \
+              || { timeout 120 sudo apt-get update -qq -o Acquire::http::Timeout=15 -o Acquire::Retries=2; sudo apt-get install -y -qq --no-install-recommends ffmpeg >/dev/null; }
           fi
           pip install -q --disable-pip-version-check edge-tts wordfreq
 
