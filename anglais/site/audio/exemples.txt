@@ -119,6 +119,7 @@ ex-sway	The trees were swaying in the wind.
 ex-swell	My ankle started to swell after the fall.
 ex-tail	The detective tailed the suspect for days.
 ex-throughout	It rained throughout the day.
+ex-tread	Treading new paths can lead to exciting discoveries.
 ex-tuck	Tuck your shirt in, please.
 ex-tuck-your-tail	When he saw the big dog, he tucked his tail and ran.
 ex-tusk	Poachers kill elephants for their tusks.
