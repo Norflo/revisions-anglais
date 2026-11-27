@@ -128,6 +128,7 @@ ex-wage	The minimum wage went up this year.
 ex-wary	Be wary of strangers online.
 ex-wedge	Put a wedge under the door to keep it open.
 ex-whim	She bought the dress on a whim.
+ex-whirlwind	They that sow the wind, shall reap the whirlwind.
 ex-work-out	I work out at the gym three times a week.
 ex-worthwhile	The trip was long, but it was worthwhile.
 ex-wrap-up	Let's wrap up the meeting.
