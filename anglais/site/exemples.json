@@ -271,6 +271,10 @@
 "Please don't [loiter] in front of the store.",
 "Merci de ne pas traîner devant le magasin."
 ],
+"Lurk": [
+"There is a critter [lurking] under this rock.",
+"Il y a une bestiole qui se cache sous cette pierre."
+],
 "Moat": [
 "The castle is surrounded by a [moat].",
 "Le château est entouré de douves."
