@@ -119,7 +119,13 @@ h1 .flag{position:relative;display:inline-grid;place-items:center;width:42px;hei
 .mode span{font-size:.88rem;opacity:.95}
 .m-cards{background:var(--t-blue)} .m-quiz{background:var(--t-pink)} .m-write{background:var(--t-orange)}
 .m-dict{background:linear-gradient(135deg,rgba(0,163,180,.86),rgba(48,209,88,.74))}
-.speak.big-speak{width:88px;height:88px;margin:12px auto 6px;display:grid}
+.dspk{display:flex;justify-content:center;gap:16px;margin:12px 0 6px}
+.speak.big-speak{width:88px;height:88px;margin:0;display:grid}
+.speak.big-speak.slow{place-content:center;gap:0;line-height:1}
+.speak.big-speak.slow span{font-size:30px}
+.speak.big-speak.slow small{font-size:.72rem;font-weight:700}
+.slowall{display:flex;align-items:center;justify-content:center;gap:8px}
+.slowall input{width:18px;height:18px;margin:0}
 .speak.big-speak svg{width:40px;height:40px}
 .m-hist{background:linear-gradient(135deg,rgba(94,92,230,.84),rgba(175,82,222,.74))}
 .hrow{padding:12px 0;border-top:1px solid var(--line)}
@@ -586,6 +592,24 @@ function audioUrl(name){
   if (!AV[name] && AV3[name]) return "audio3000/" + name + ".mp3?v=" + AV3[name];
   return "audio/" + name + ".mp3?v=" + (AV[name] || "5");
 }
+// Lecture lente : le son Ava est joué à 65 % de sa vitesse sans changer la hauteur de la voix.
+// Sans son Ava : voix du téléphone ralentie (APK récente), sinon voix normale.
+const SLOW = 0.65;
+function slowTts(t){
+  try { if (window.AndroidApp && typeof AndroidApp.speakRate === "function") { AndroidApp.speakRate(String(t), 0.55); return; } } catch (e) {}
+  ttsFallback(t);
+}
+function speakSlow(t){
+  speakToken++; stopCur();
+  try { if (player) player.pause(); } catch (e) {}
+  const a = new Audio(audioUrl(audioSlug(t)));
+  a.preservesPitch = true; a.mozPreservesPitch = true; a.webkitPreservesPitch = true;
+  a.playbackRate = SLOW; a.defaultPlaybackRate = SLOW;
+  player = a;
+  let failed = false; const fail = () => { if (!failed) { failed = true; slowTts(t); } };
+  a.onerror = fail;
+  const p = a.play(); if (p && p.catch) p.catch(fail);
+}
 function speak(t){
   const url = audioUrl(audioSlug(t));
   const ctx = getCtx();
@@ -810,8 +834,9 @@ function renderPlay(){
     </div>`;
   const tag = S.dir==="en" ? "Anglais → Français" : "Français → Anglais";
   const head = S.mode === "dict" ? `<div class="dirtag">Dictée : écoute, puis écris le mot</div>
-    <button class="speak big-speak" data-speak="${esc(w.en)}" aria-label="Réécouter">${ICON.speak}</button>
-    <div class="hint">${S.answered ? "" : "Touche le haut-parleur pour réécouter"}</div>` : `<div class="dirtag">${tag}</div>
+    <div class="dspk"><button class="speak big-speak" data-speak="${esc(w.en)}" aria-label="Réécouter">${ICON.speak}</button>
+      <button class="speak big-speak slow" data-slow="${esc(w.en)}" aria-label="Réécouter lentement"><span>🐢</span><small>lent</small></button></div>
+    ${S.answered ? "" : `<label class="hint slowall"><input type="checkbox" data-slowall ${settings.slow ? "checked" : ""}> Toujours prononcer lentement</label>`}` : `<div class="dirtag">${tag}</div>
     <div class="word ${S.dir==="fr"?"fr":"say"}"${S.dir==="en"?` data-speak="${esc(w.en)}"`:""}>${S.dir==="fr" ? frHtml(prompt) : esc(prompt)}</div>
     ${S.dir==="en" ? speakBtn(w.en) : ""}`;
 
@@ -982,7 +1007,7 @@ function render(){
   else if (view==="hist") $app.innerHTML = renderHist();
   // Dictée : le mot est prononcé tout seul à l'arrivée de chaque carte.
   if (view==="play" && S.mode==="dict" && !S.answered && S.said !== S.pos){
-    S.said = S.pos; const wd = current(); setTimeout(() => speak(wd.en), 150);
+    S.said = S.pos; const wd = current(); setTimeout(() => settings.slow ? speakSlow(wd.en) : speak(wd.en), 150);
   }
   if (view==="play" && (S.mode==="write" || S.mode==="dict") && !S.answered){
     const inp = document.getElementById("winput");
@@ -1002,6 +1027,8 @@ document.getElementById("tabs").addEventListener("click", e => {
 });
 
 $app.addEventListener("click", e => {
+  const sl = e.target.closest("[data-slow]");
+  if (sl) { e.stopPropagation(); speakSlow(sl.dataset.slow); return; }
   const sp = e.target.closest("[data-speak]");
   if (sp) { e.stopPropagation(); speak(sp.dataset.speak); return; }
   const ed = e.target.closest("[data-edit]");
@@ -1064,6 +1091,11 @@ document.addEventListener("click", e => {
 });
 $app.addEventListener("change", e => {
   if (e.target.dataset && e.target.dataset.tmiss !== undefined) { topMissing = e.target.checked; render(); }
+  if (e.target.dataset && e.target.dataset.slowall !== undefined) {
+    settings.slow = e.target.checked; saveSettings();
+    if (settings.slow && view === "play" && S && S.mode === "dict") speakSlow(current().en);
+    const inp = document.getElementById("winput"); if (inp) inp.focus();
+  }
 });
 $app.addEventListener("focusout", e => {
   if (e.target.id !== "mineinput") return;

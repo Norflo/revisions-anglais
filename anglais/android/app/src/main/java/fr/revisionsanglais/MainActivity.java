@@ -298,6 +298,15 @@ public class MainActivity extends Activity {
             if (tts != null && ttsReady) tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "say");
         }
 
+        /** Voix du téléphone à une autre vitesse (dictée lente : rate 0.55). */
+        @JavascriptInterface
+        public void speakRate(String text, float rate) {
+            if (tts == null || !ttsReady) return;
+            tts.setSpeechRate(Math.max(0.3f, Math.min(1.5f, rate)));
+            tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "say-rate");
+            tts.setSpeechRate(0.92f);
+        }
+
         /** Voix utilisée (pour l'afficher et refaire les sons si elle change). */
         @JavascriptInterface
         public String voiceInfo() {
