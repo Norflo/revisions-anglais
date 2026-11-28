@@ -118,6 +118,9 @@ h1 .flag{position:relative;display:inline-grid;place-items:center;width:42px;hei
 .mode b{display:block;font-family:var(--font-d);font-weight:700;font-size:1.2rem;line-height:1.2;letter-spacing:-.02em}
 .mode span{font-size:.88rem;opacity:.95}
 .m-cards{background:var(--t-blue)} .m-quiz{background:var(--t-pink)} .m-write{background:var(--t-orange)}
+.m-dict{background:linear-gradient(135deg,rgba(0,163,180,.86),rgba(48,209,88,.74))}
+.speak.big-speak{width:88px;height:88px;margin:12px auto 6px;display:grid}
+.speak.big-speak svg{width:40px;height:40px}
 .m-hist{background:linear-gradient(135deg,rgba(94,92,230,.84),rgba(175,82,222,.74))}
 .hrow{padding:12px 0;border-top:1px solid var(--line)}
 .hhead{display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap}
@@ -602,6 +605,7 @@ function speak(t){
   }).catch(() => { if (token === speakToken) speakEl(url, t); });
 }
 const ICON = {
+  ear:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8.5a6 6 0 0 1 12 0c0 4-4 4.5-4 8a3 3 0 0 1-5.5 1.6"/><path d="M9 9a3 3 0 0 1 6 0c0 1.5-1.5 2-2 3"/></svg>',
   hist:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4h4"/><path d="M12 7v5l3 2"/></svg>',
   speak:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg>',
   cards:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="14" height="14" rx="2"/><path d="M7 3h12a2 2 0 0 1 2 2v12"/></svg>',
@@ -643,7 +647,7 @@ function buildQueue(n){
 const HKEY = "vocab-history-v1";
 let HIST = [];
 try { HIST = JSON.parse(localStorage.getItem(HKEY)) || []; } catch (e) { HIST = []; }
-const MODE_NAME = { cards: "Cartes", quiz: "QCM", write: "Écrire", ctx: "En contexte", due: "Mots à revoir" };
+const MODE_NAME = { cards: "Cartes", quiz: "QCM", write: "Écrire", dict: "Dictée", ctx: "En contexte", due: "Mots à revoir" };
 function saveSeries(){
   if (!S || S.saved) return; S.saved = true;
   const en = [...new Set(S.queue.slice(0, S.total).map(i => W[i] && W[i].en).filter(Boolean))];
@@ -656,7 +660,7 @@ function saveSeries(){
 function startList(idx, mode){
   const q = shuffle(idx.slice()).slice(0, 60);
   if (!q.length) return;
-  S = { mode, dir: mode==="write" ? "fr" : settings.dir, queue: q, pos: 0, total: q.length, replay: true,
+  S = { mode, dir: mode==="write" ? "fr" : mode==="dict" ? "en" : settings.dir, queue: q, pos: 0, total: q.length, replay: true,
         graded: new Set(), right: [], wrong: [], answered: false, choice: null, typed: "", okTyped: null, opts: null };
   view = "play"; render(); window.scrollTo(0, 0);
 }
@@ -670,7 +674,7 @@ function fmtDate(t){
   return day + ", " + d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 }
 function replayBtns(attr){
-  return `<div class="rpl"><button class="btn ghost sm" ${attr} data-rmode="cards">Cartes</button><button class="btn ghost sm" ${attr} data-rmode="quiz">QCM</button><button class="btn ghost sm" ${attr} data-rmode="write">Écrire</button></div>`;
+  return `<div class="rpl"><button class="btn ghost sm" ${attr} data-rmode="cards">Cartes</button><button class="btn ghost sm" ${attr} data-rmode="quiz">QCM</button><button class="btn ghost sm" ${attr} data-rmode="write">Écrire</button><button class="btn ghost sm" ${attr} data-rmode="dict">Dictée</button></div>`;
 }
 function renderHist(){
   const seen = seenIdx();
@@ -693,7 +697,7 @@ function renderHist(){
 
 function start(mode){
   const q = buildQueue(settings.size);
-  S = { mode, dir: mode==="write" ? "fr" : settings.dir, queue: q, pos: 0, total: q.length,
+  S = { mode, dir: mode==="write" ? "fr" : mode==="dict" ? "en" : settings.dir, queue: q, pos: 0, total: q.length,
         graded: new Set(), right: [], wrong: [], answered: false, choice: null, typed: "", okTyped: null, opts: null };
   view = "play"; render();
 }
@@ -725,6 +729,11 @@ function options(w){
   for (const x of pool){ if (picked.length===3) break; if (!picked.some(p => sameAnswer(p,x,S.dir))) picked.push(x); }
   return shuffle([w, ...picked]).map(x => x.i);
 }
+
+// Dictée : on compare au mot anglais, sans tenir compte des majuscules, de la ponctuation,
+// des apostrophes ni d'un « to » devant un verbe.
+const dnorm = s => norm(s).replace(/[’']/g, "").replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim().replace(/^to /, "");
+function checkDict(w, input){ const t = dnorm(input); return !!t && t === dnorm(w.en); }
 
 function checkTyped(w, input){
   const t = norm(input).replace(/^to /,"");
@@ -785,6 +794,7 @@ function renderHome(){
     <button class="mode m-cards" data-start="cards"><span class="ic">${ICON.cards}</span><span><b>Cartes</b><span>Tu essaies de te souvenir, puis tu retournes la carte.</span></span></button>
     <button class="mode m-quiz" data-start="quiz"><span class="ic">${ICON.quiz}</span><span><b>QCM</b><span>Choisis la bonne traduction parmi 4.</span></span></button>
     <button class="mode m-write" data-start="write"><span class="ic">${ICON.write}</span><span><b>Écrire</b><span>On te donne le français, tu tapes le mot anglais.</span></span></button>
+    <button class="mode m-dict" data-start="dict"><span class="ic">${ICON.ear}</span><span><b>Dictée</b><span>Tu entends le mot en anglais, tu l'écris.</span></span></button>
     <button class="mode m-hist" data-hist><span class="ic">${ICON.hist}</span><span><b>Revoir mes séries</b><span>Rejoue une série passée, ou tous les mots déjà vus.</span></span></button>
   </div>`;
 }
@@ -799,7 +809,9 @@ function renderPlay(){
       <div class="count">${doneCount}/${S.total}</div>
     </div>`;
   const tag = S.dir==="en" ? "Anglais → Français" : "Français → Anglais";
-  const head = `<div class="dirtag">${tag}</div>
+  const head = S.mode === "dict" ? `<div class="dirtag">Dictée : écoute, puis écris le mot</div>
+    <button class="speak big-speak" data-speak="${esc(w.en)}" aria-label="Réécouter">${ICON.speak}</button>
+    <div class="hint">${S.answered ? "" : "Touche le haut-parleur pour réécouter"}</div>` : `<div class="dirtag">${tag}</div>
     <div class="word ${S.dir==="fr"?"fr":"say"}"${S.dir==="en"?` data-speak="${esc(w.en)}"`:""}>${S.dir==="fr" ? frHtml(prompt) : esc(prompt)}</div>
     ${S.dir==="en" ? speakBtn(w.en) : ""}`;
 
@@ -834,7 +846,7 @@ function renderPlay(){
   if (!S.answered) {
     return top + `<section class="postcard card">${head}
         <form class="writebox" id="wform" autocomplete="off">
-          <input type="text" id="winput" placeholder="Le mot en anglais…" autocapitalize="off" autocorrect="off" spellcheck="false">
+          <input type="text" id="winput" placeholder="${S.mode==="dict" ? "Ce que tu entends…" : "Le mot en anglais…"}" autocapitalize="off" autocorrect="off" spellcheck="false">
           <button class="btn main" type="submit">Vérifier</button>
           <button class="btn ghost" type="button" data-giveup>Je ne sais pas</button>
         </form>
@@ -844,7 +856,7 @@ function renderPlay(){
       <div class="postmark ${S.okTyped?"good":"bad"}">${S.okTyped?"Bravo !":"Raté"}</div>
       <div class="detail"><div class="verdict ${S.okTyped?"good":"bad"}">${S.okTyped?"Bravo !":(S.typed?`Tu as écrit « ${esc(S.typed)} »`:"La réponse était :")}</div></div>
       ${detail(w).replace('<div class="detail">','<div class="detail" style="border:0;margin-top:0;padding-top:4px">')}
-      ${speakBtn(w.en)}
+      ${S.mode === "dict" ? "" : speakBtn(w.en)}
     </section>
     ${(!S.okTyped && S.typed) ? `<div style="margin-top:10px"><button class="btn ghost" data-override>En fait, j'avais juste (faute de frappe)</button></div>` : ""}
     <div style="margin-top:10px"><button class="btn main" data-next>Suivant</button></div>`;
@@ -968,7 +980,11 @@ function render(){
   else if (view==="list") $app.innerHTML = renderList();
   else if (view==="table") $app.innerHTML = renderTable();
   else if (view==="hist") $app.innerHTML = renderHist();
-  if (view==="play" && S.mode==="write" && !S.answered){
+  // Dictée : le mot est prononcé tout seul à l'arrivée de chaque carte.
+  if (view==="play" && S.mode==="dict" && !S.answered && S.said !== S.pos){
+    S.said = S.pos; const wd = current(); setTimeout(() => speak(wd.en), 150);
+  }
+  if (view==="play" && (S.mode==="write" || S.mode==="dict") && !S.answered){
     const inp = document.getElementById("winput");
     if (inp) setTimeout(() => { try { inp.focus(); } catch(e){} }, 30);
   }
@@ -1066,7 +1082,7 @@ $app.addEventListener("submit", e => {
   const val = document.getElementById("winput").value;
   if (!val.trim()) return;
   const w = current();
-  S.typed = val.trim(); S.okTyped = checkTyped(w, val); S.answered = true;
+  S.typed = val.trim(); S.okTyped = S.mode === "dict" ? checkDict(w, val) : checkTyped(w, val); S.answered = true;
   answer(S.okTyped);
   render();
 });
