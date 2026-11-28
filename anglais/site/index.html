@@ -131,8 +131,8 @@ h1 .flag{position:relative;display:inline-grid;place-items:center;width:42px;hei
 .hrow{padding:12px 0;border-top:1px solid var(--line)}
 .hhead{display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap}
 .hwords{margin-top:3px}
-.rpl{display:flex;gap:8px;margin-top:8px}
-.rpl .btn{flex:1;padding:9px 6px;font-size:.9rem}
+.rpl{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.rpl .btn{width:100%;padding:9px 4px;font-size:.88rem;white-space:nowrap}
 
 /* Contrôles segmentés */
 .seg{display:flex;gap:2px;background:var(--track);border-radius:999px;padding:3px}
@@ -687,10 +687,12 @@ function saveSeries(){
 }
 // Lance un exercice sur une liste de mots donnée (indices dans W).
 function startList(idx, mode){
+  // « En contexte » (APK) : seulement les mots qui ont une phrase d'exemple.
+  if (mode === "ctx") idx = typeof window.ctxFilter === "function" ? idx.filter(i => window.ctxFilter(W[i])) : [];
   const q = shuffle(idx.slice()).slice(0, 60);
   if (!q.length) return;
-  S = { mode, dir: mode==="write" ? "fr" : mode==="dict" ? "en" : settings.dir, queue: q, pos: 0, total: q.length, replay: true,
-        graded: new Set(), right: [], wrong: [], answered: false, choice: null, typed: "", okTyped: null, opts: null };
+  S = { mode, dir: mode==="write" ? "fr" : (mode==="dict" || mode==="ctx") ? "en" : settings.dir, queue: q, pos: 0, total: q.length, replay: true,
+        graded: new Set(), right: [], wrong: [], answered: false, choice: null, typed: "", okTyped: null, opts: null, showFr: false, played: -1 };
   view = "play"; render(); window.scrollTo(0, 0);
 }
 const seenIdx = () => W.filter(w => rec(w).b > 0).map(w => w.i);
@@ -703,7 +705,7 @@ function fmtDate(t){
   return day + ", " + d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 }
 function replayBtns(attr){
-  return `<div class="rpl"><button class="btn ghost sm" ${attr} data-rmode="cards">Cartes</button><button class="btn ghost sm" ${attr} data-rmode="quiz">QCM</button><button class="btn ghost sm" ${attr} data-rmode="write">Écrire</button><button class="btn ghost sm" ${attr} data-rmode="dict">Dictée</button></div>`;
+  return `<div class="rpl"><button class="btn ghost sm" ${attr} data-rmode="cards">Cartes</button><button class="btn ghost sm" ${attr} data-rmode="quiz">QCM</button><button class="btn ghost sm" ${attr} data-rmode="write">Écrire</button><button class="btn ghost sm" ${attr} data-rmode="dict">Dictée</button>${typeof window.ctxFilter === "function" ? `<button class="btn ghost sm" ${attr} data-rmode="ctx">Contexte</button>` : ""}</div>`;
 }
 function renderHist(){
   const seen = seenIdx();

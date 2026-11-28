@@ -3,7 +3,7 @@
 // Traduction et voix fournies par l'appli Android (objet AndroidApp).
 (function () {
   if (!window.AndroidApp) return;
-  const AJOUT_VERSION = "28/11 · 11";   // affichée en bas de « + Ajouter » : dit quelle version tourne
+  const AJOUT_VERSION = "28/11 · 12";   // affichée en bas de « + Ajouter » : dit quelle version tourne
 
   const AKEY = "vocab-added-v1";
   const key = s => String(s || "").toLowerCase().replace(/\s+/g, " ").trim();
@@ -666,6 +666,7 @@
   let EX = {};
   fetch("exemples.json").then(r => r.ok ? r.json() : {}).then(d => { EX = d || {}; if (view === "home") render(); }).catch(() => {});
   const hasEx = w => !!EX[w.en];
+  window.ctxFilter = hasEx;   // pour « Revoir mes séries » → En contexte
 
   const st2 = document.createElement("style");
   st2.textContent = `
