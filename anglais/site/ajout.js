@@ -3,7 +3,7 @@
 // Traduction et voix fournies par l'appli Android (objet AndroidApp).
 (function () {
   if (!window.AndroidApp) return;
-  const AJOUT_VERSION = "28/11 · 14";   // affichée en bas de « + Ajouter » : dit quelle version tourne
+  const AJOUT_VERSION = "28/11 · 15";   // affichée en bas de « + Ajouter » : dit quelle version tourne
 
   const AKEY = "vocab-added-v1";
   const key = s => String(s || "").toLowerCase().replace(/\s+/g, " ").trim();
@@ -686,7 +686,9 @@
     const html = baseHome();
     const n = W.filter(hasEx).length;
     const btn = `<button class="mode m-ctx" data-start="ctx"><span class="ic">${ICON_CTX}</span><span><b>En contexte</b><span>${n ? "Le mot dans une phrase courante : trouve celui qui manque." : "Chargement des phrases…"}</span></span></button>`;
-    const k = html.lastIndexOf("</div>");
+    // « En contexte » juste avant « Revoir mes séries », qui reste en dernier.
+    let k = html.indexOf('<button class="mode m-hist"');
+    if (k < 0) k = html.lastIndexOf("</div>");
     return html.slice(0, k) + btn + html.slice(k);
   };
 
