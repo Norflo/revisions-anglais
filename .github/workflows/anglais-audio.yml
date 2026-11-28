@@ -23,6 +23,10 @@ jobs:
     timeout-minutes: 6
     steps:
       - uses: actions/checkout@v5
+        with:
+          sparse-checkout: |
+            anglais/tools
+            anglais/site/audio
 
       # Outils : ffmpeg sans ses paquets « recommandés » (beaucoup plus rapide), « apt-get update »
       # seulement si l'installation échoue ; paquets Python gardés en cache d'un passage à l'autre.

@@ -39,6 +39,10 @@ Appli Android de révision du vocabulaire anglais, rangée ici à part de Radar 
   `dét.`, `num.`.
 - `site/audio3000/` : sons Ava des 3000 mots courants (workflow « Révisions d'anglais - sons des 3000 mots »,
   `make_audio.py --top`). Hors de l'APK (≈ 50 Mo) : l'appli télécharge un son quand on touche le mot.
+- `site/words20k.txt` + `site/audio20k/` : sons Ava des 20 000 mots anglais les plus fréquents (formes comprises :
+  was, years…) qui n'ont pas déjà un son (≈ 16 750 sons, workflow « sons des 20 000 mots », `make_audio.py --big`,
+  par paquets, relancé tout seul). Pas de versions.json : l'appli essaie `audio20k/<mot>.mp3`, sinon voix du
+  téléphone. Hors de l'APK. Les workflows ne téléchargent pas ces dossiers (sparse-checkout).
 - `android/` : l'appli Android (WebView). Un changement dans `android/` refait l'APK
   (workflow « Révisions d'anglais - APK »). La page et les sons sont aussi copiés dans l'APK
   pour marcher hors connexion.

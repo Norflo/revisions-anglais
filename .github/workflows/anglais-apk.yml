@@ -21,7 +21,14 @@ jobs:
   apk:
     runs-on: ubuntu-latest
     steps:
+      # Sans les dossiers de sons des 3000 et 20 000 mots (hors de l'APK, et lourds à télécharger).
       - uses: actions/checkout@v5
+        with:
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/anglais/site/audio3000/
+            !/anglais/site/audio20k/
 
       - uses: actions/setup-java@v5
         with:

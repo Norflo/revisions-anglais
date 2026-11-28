@@ -1,0 +1,65 @@
+# Appli « Révisions d'anglais » : sons Ava des 20 000 mots anglais les plus fréquents
+# (anglais/site/words20k.txt → anglais/site/audio20k/), pour que tout mot ajouté dans l'appli ait la voix Ava.
+# Fabrique les sons manquants par paquets, enregistre après chaque paquet, et se relance tout seul
+# tant qu'il en reste (environ 2 h la première fois).
+name: Révisions d'anglais - sons des 20 000 mots
+
+on:
+  push:
+    branches: [main]
+    paths: ["anglais/site/words20k.txt", ".github/workflows/anglais-audio20k.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: anglais-audio20k
+  cancel-in-progress: false
+
+jobs:
+  audio:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: |
+            anglais/tools
+            anglais/site/audio20k
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-edge-tts-wordfreq
+
+      - name: Outils
+        run: |
+          if ! command -v ffmpeg >/dev/null; then
+            timeout 90 sudo apt-get install -y -qq --no-install-recommends ffmpeg >/dev/null 2>&1 \
+              || { timeout 120 sudo apt-get update -qq -o Acquire::http::Timeout=15 -o Acquire::Retries=2; sudo apt-get install -y -qq --no-install-recommends ffmpeg >/dev/null; }
+          fi
+          pip install -q --disable-pip-version-check edge-tts
+
+      - name: Fabrication et enregistrement par paquets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          debut=$(date +%s); reste=1; avant=""; bloque=0
+          while [ $(( $(date +%s) - debut )) -lt 2400 ]; do
+            reste=$(python3 anglais/tools/make_audio.py anglais/site --big --max 1500 | tee /dev/stderr | sed -n 's/^reste //p' | tail -1)
+            git add anglais/site/audio20k
+            if ! git diff --cached --quiet; then
+              git commit -q -m "Anglais : sons Ava des 20 000 mots (paquet, reste ${reste})"
+              for i in 1 2 3 4; do git pull --rebase -q && git push -q && break; sleep 5; done
+            fi
+            [ "${reste:-0}" = "0" ] && break
+            # plus aucun progrès (mots qui échouent à chaque fois) : on s'arrête, sans se relancer
+            if [ "$reste" = "$avant" ]; then bloque=1; break; fi
+            avant=$reste
+          done
+          echo "Reste : ${reste:-?}"
+          if [ "${reste:-0}" != "0" ] && [ "$bloque" = "0" ]; then gh workflow run anglais-audio20k.yml --ref main; fi

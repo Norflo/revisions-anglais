@@ -3,7 +3,7 @@
 // Traduction et voix fournies par l'appli Android (objet AndroidApp).
 (function () {
   if (!window.AndroidApp) return;
-  const AJOUT_VERSION = "28/11 · 15";   // affichée en bas de « + Ajouter » : dit quelle version tourne
+  const AJOUT_VERSION = "28/11 · 16";   // affichée en bas de « + Ajouter » : dit quelle version tourne
 
   const AKEY = "vocab-added-v1";
   const key = s => String(s || "").toLowerCase().replace(/\s+/g, " ").trim();

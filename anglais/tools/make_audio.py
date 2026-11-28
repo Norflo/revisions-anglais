@@ -8,6 +8,8 @@
 
 Usage : python3 make_audio.py anglais/site          (mots de DATA + phrases d'exemple → audio/)
         python3 make_audio.py anglais/site --top    (3000 mots courants, top3000.json → audio3000/)
+        python3 make_audio.py anglais/site --big [--max N]   (20 000 mots, words20k.txt → audio20k/ ;
+                                                 N sons au plus par appel ; pas de versions.json)
 """
 import asyncio
 import hashlib
@@ -21,7 +23,9 @@ import edge_tts
 
 SITE = pathlib.Path(sys.argv[1])
 TOP = "--top" in sys.argv[2:]
-AUDIO = SITE / ("audio3000" if TOP else "audio")
+BIG = "--big" in sys.argv[2:]
+MAX = int(sys.argv[sys.argv.index("--max") + 1]) if "--max" in sys.argv else 0
+AUDIO = SITE / ("audio20k" if BIG else "audio3000" if TOP else "audio")
 TOOLS = pathlib.Path(__file__).resolve().parent
 VOICE = (TOOLS / "voice.txt").read_text().strip()
 STAMP = AUDIO / "voice.txt"
@@ -32,6 +36,8 @@ def slug(s):
 
 
 def words():
+    if BIG:
+        return [w for w in (SITE / "words20k.txt").read_text(encoding="utf-8").split("\n") if w.strip()]
     if TOP:
         return [d[0] for d in json.loads((SITE / "top3000.json").read_text(encoding="utf-8"))]
     html = (SITE / "index.html").read_text(encoding="utf-8")
@@ -67,7 +73,7 @@ def clean(raw, out):
 
 def examples():
     f = SITE / "exemples.json"
-    if TOP or not f.exists():
+    if TOP or BIG or not f.exists():
         return {}
     return {w: v[0].replace("[", "").replace("]", "") for w, v in json.loads(f.read_text(encoding="utf-8")).items()}
 
@@ -96,6 +102,10 @@ async def make(text, sem, name=None):
 async def main():
     AUDIO.mkdir(parents=True, exist_ok=True)
     redo_all = not STAMP.exists() or STAMP.read_text().strip() != VOICE
+    if BIG:
+        # 20 000 sons faits par paquets : on ne refait jamais tout (sinon chaque paquet recommencerait
+        # au début). Pour changer de voix ici, supprimer le dossier audio20k.
+        redo_all = False
     todo = [(w, slug(w)) for w in words() if redo_all or not (AUDIO / f"{slug(w)}.mp3").exists()]
     # Phrases d'exemple (exercice « En contexte ») : audio/ex-<slug>.mp3, refaites si la phrase change.
     done = {}
@@ -110,16 +120,22 @@ async def main():
         if redo_all or done.get(name) != sentence or not (AUDIO / f"{name}.mp3").exists():
             todo.append((sentence, name))
     print(f"Voix {VOICE} — {len(todo)} son(s) à fabriquer" + (" (tous)" if redo_all else ""))
-    sem = asyncio.Semaphore(8 if TOP else 4)
+    left = 0
+    if MAX and len(todo) > MAX:
+        left = len(todo) - MAX; todo = todo[:MAX]
+    sem = asyncio.Semaphore(10 if BIG else 8 if TOP else 4)
     # Un son qui échoue (réseau) n'arrête pas les autres : il sera refait au prochain passage.
     res = await asyncio.gather(*(make(t, sem, n) for t, n in todo), return_exceptions=True)
     bad = [n for (t, n), r in zip(todo, res) if isinstance(r, Exception)]
     if bad:
         print(f"{len(bad)} son(s) en échec, refaits au prochain passage : {', '.join(bad[:20])}")
-    if not TOP:
+    if not (TOP or BIG):
         stamp_ex.write_text("".join(f"ex-{slug(w)}\t{s}\n" for w, s in ex.items()), encoding="utf-8")
-    if not bad or TOP:
+    if ((not bad or TOP) and not left) or BIG:
         STAMP.write_text(VOICE + "\n")
+    print(f"reste {left + len(bad)}")
+    if BIG:
+        return   # 20 000 sons : pas de versions.json (l'appli essaie directement audio20k/<mot>.mp3)
     # versions.json : une empreinte par son. L'appli l'ajoute à l'adresse du son (?v=…) :
     # un son refait sous le même nom (phrase changée, nouvelle voix) n'est plus confondu avec l'ancien.
     vers = {f.stem: hashlib.md5(f.read_bytes()).hexdigest()[:8] for f in sorted(AUDIO.glob("*.mp3"))}

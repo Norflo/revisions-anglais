@@ -599,9 +599,13 @@ document.addEventListener("visibilitychange", () => {
 let AV3 = {};
 function loadAV3(){ fetch("audio3000/versions.json").then(r => r.ok ? r.json() : {}).then(d => { if (d && Object.keys(d).length) AV3 = d; }).catch(() => {}); }
 loadAV3();
+// Sinon, les 20 000 mots anglais les plus fréquents : audio20k/<mot>.mp3 (pas de liste à charger :
+// si le mot n'y est pas, le son manque et la voix du téléphone prend le relais).
 function audioUrl(name){
-  if (!AV[name] && AV3[name]) return "audio3000/" + name + ".mp3?v=" + AV3[name];
-  return "audio/" + name + ".mp3?v=" + (AV[name] || "5");
+  if (AV[name]) return "audio/" + name + ".mp3?v=" + AV[name];
+  if (AV3[name]) return "audio3000/" + name + ".mp3?v=" + AV3[name];
+  if (Object.keys(AV).length && Object.keys(AV3).length && /^[a-z]+$/.test(name)) return "audio20k/" + name + ".mp3?v=1";
+  return "audio/" + name + ".mp3?v=5";
 }
 // Lecture lente : le son Ava est joué à 65 % de sa vitesse sans changer la hauteur de la voix.
 // Sans son Ava : voix du téléphone ralentie (APK récente), sinon voix normale.
