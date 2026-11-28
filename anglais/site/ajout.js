@@ -3,7 +3,7 @@
 // Traduction et voix fournies par l'appli Android (objet AndroidApp).
 (function () {
   if (!window.AndroidApp) return;
-  const AJOUT_VERSION = "28/11 · 17";   // affichée en bas de « + Ajouter » : dit quelle version tourne
+  const AJOUT_VERSION = "28/11 · 18";   // affichée en bas de « + Ajouter » : dit quelle version tourne
 
   const AKEY = "vocab-added-v1";
   const key = s => String(s || "").toLowerCase().replace(/\s+/g, " ").trim();
@@ -846,7 +846,7 @@
   $app.addEventListener("click", e => {
     if (view !== "home") return;
     if (e.target.closest("[data-due-go]")) { start("due"); return; }
-    if (e.target.closest(".stat.s-due")) { listFilter = "due"; listQuery = ""; view = "list"; render(); window.scrollTo(0, 0); }
+    // (« à revoir », « nouveaux », « maîtrisés » : gérés par la page principale)
   });
 
 
