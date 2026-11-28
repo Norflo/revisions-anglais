@@ -3,7 +3,7 @@
 // Traduction et voix fournies par l'appli Android (objet AndroidApp).
 (function () {
   if (!window.AndroidApp) return;
-  const AJOUT_VERSION = "28/11 · 19";   // affichée en bas de « + Ajouter » : dit quelle version tourne
+  const AJOUT_VERSION = "28/11 · 20";   // affichée en bas de « + Ajouter » : dit quelle version tourne
 
   const AKEY = "vocab-added-v1";
   const key = s => String(s || "").toLowerCase().replace(/\s+/g, " ").trim();
@@ -212,6 +212,8 @@
       F.msg = "Pas de traduction trouvée (Internet ?). Tu peux l'écrire toi-même."; F.ok = false;
     } else {
       F.alts = r.alts.concat(F.alts.filter(a => POS_RE.test(a))); if (!F.cands.length && !F.alts.some(a => POS_RE.test(a))) F.fr = r.alts[0];
+      // Choix automatique pas encore touché : on le refait avec la traduction générale qui vient d'arriver.
+      if (F.cands.length && (F.auto || !F.cands.some(c => c.on))) { readForm(); F.cands.forEach(c => { c.on = false; }); autoPick(); }
       F.msg = ""; F.ok = true;
     }
     if (view === "add") render();
@@ -350,6 +352,16 @@
       F.cands.push(...flat);
     }
     F.fr = buildFr();
+    autoPick();
+  }
+  // Pour que la case « Traduction » ne soit jamais vide : on coche le sens qui correspond à la
+  // traduction générale (MyMemory), sinon le premier mot proposé. Seulement si rien n'est coché.
+  const plainFr = t => key(t).replace(/[.!?]+$/, "").replace(/^(le |la |les |l'|l’|un |une |des |du |de |d'|d’|se |s')/, "").trim();
+  function autoPick() {
+    if (!F.cands.length || F.cands.some(c => c.on)) return;
+    const alts = F.alts.filter(a => !POS_RE.test(a)).map(plainFr);
+    const c = F.cands.find(x => alts.includes(plainFr(x.w))) || F.cands[0];
+    c.on = true; F.auto = true; F.fr = buildFr();
   }
   function buildFr() {
     return POS_ORDER.map(p => {
@@ -417,7 +429,7 @@
     readForm();
     const en = F.en.trim();
     if (!en) return;
-    F.busy = true; F.alts = []; F.cands = []; F.wk = "Recherche des sens par nature sur Wiktionary…"; F.msg = ""; reqId++;
+    F.busy = true; F.alts = []; F.cands = []; F.auto = false; F.wk = "Recherche des sens par nature sur Wiktionary…"; F.msg = ""; reqId++;
     F.dup = W.find(w => key(w.en) === key(en)) || null;
     render();
     try { AndroidApp.translate(reqId, en); } catch (e) { F.busy = false; render(); }
@@ -462,7 +474,7 @@
     const en = F.en.trim().replace(/\s+/g, " ");
     const fr = F.fr.trim();
     if (!en) { F.msg = "Écris d'abord le mot anglais."; F.ok = false; return render(); }
-    if (!fr && !F.mine.trim()) { F.msg = "Ajoute une traduction."; F.ok = false; return render(); }
+    if (!fr && !F.mine.trim()) { F.msg = F.cands.length ? "Touche au moins un sens ci-dessus (sous n., v., adj.…), ou écris la traduction." : "Ajoute une traduction."; F.ok = false; return render(); }
     if (exists(en)) { F.dup = W.find(w => key(w.en) === key(en)); F.msg = ""; return render(); }
     const word = en.charAt(0).toUpperCase() + en.slice(1);
     added.push({ en: word, fr: fr || F.mine.trim(), mine: F.mine.trim(), note: F.note.trim(), t: Date.now() });
@@ -476,6 +488,7 @@
 
 
   $app.addEventListener("input", e => {
+    if (view === "add" && e.target.id === "a-fr") F.auto = false;
     if (view === "add" && e.target.id === "a-en" && F.dup && key(e.target.value) !== key(F.dup.en)) {
       readForm(); F.dup = null; render();
       const el = document.getElementById("a-en"); if (el) { el.focus(); const n = el.value.length; el.setSelectionRange(n, n); }
@@ -489,7 +502,7 @@
     if (view !== "add") return;
     const t = e.target.closest("button"); if (!t) return;
     if (t.dataset.alt !== undefined) { readForm(); F.fr = F.alts[+t.dataset.alt]; F.cands.forEach(c => { c.on = false; }); render(); return; }
-    if (t.dataset.cand !== undefined) { readForm(); const c = F.cands[+t.dataset.cand]; c.on = !c.on; F.fr = buildFr(); render(); return; }
+    if (t.dataset.cand !== undefined) { readForm(); F.auto = false; const c = F.cands[+t.dataset.cand]; c.on = !c.on; F.fr = buildFr(); render(); return; }
     if (t.dataset.aListen !== undefined) { readForm(); if (F.en.trim()) speak(F.en.trim()); return; }   // voix Ava si le mot en a une, sinon le téléphone
     if (t.dataset.aSave !== undefined) { save(); return; }
     if (t.dataset.aReplace !== undefined) { replace(); return; }
