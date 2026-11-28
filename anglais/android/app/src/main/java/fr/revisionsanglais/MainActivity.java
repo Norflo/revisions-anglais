@@ -425,8 +425,11 @@ public class MainActivity extends Activity {
 
     @Override
     public void onBackPressed() {
-        if (web.canGoBack()) web.goBack();
-        else super.onBackPressed();
+        // Geste ou bouton « retour » : la page revient à l'écran précédent (window.appBack()).
+        // Elle répond false seulement sur l'accueil : l'appli se ferme alors normalement.
+        web.evaluateJavascript("(function(){try{return !!(window.appBack&&window.appBack());}catch(e){return false;}})()", r -> {
+            if (!"true".equals(r)) super.onBackPressed();
+        });
     }
 
     @Override

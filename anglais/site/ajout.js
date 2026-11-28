@@ -3,7 +3,7 @@
 // Traduction et voix fournies par l'appli Android (objet AndroidApp).
 (function () {
   if (!window.AndroidApp) return;
-  const AJOUT_VERSION = "28/11 · 18";   // affichée en bas de « + Ajouter » : dit quelle version tourne
+  const AJOUT_VERSION = "28/11 · 19";   // affichée en bas de « + Ajouter » : dit quelle version tourne
 
   const AKEY = "vocab-added-v1";
   const key = s => String(s || "").toLowerCase().replace(/\s+/g, " ").trim();
@@ -195,6 +195,7 @@
   const baseRender = render;
   render = function () {
     if (view !== "add") { tb.classList.remove("on"); return baseRender(); }
+    trackNav();
     document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b === tb));
     document.querySelector(".wrap").classList.remove("wide");
     $app.innerHTML = renderAdd();

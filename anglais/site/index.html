@@ -1020,7 +1020,32 @@ function renderTable(){
   </section>`;
 }
 
+// ---------- Retour (geste ou bouton « retour » d'Android, via l'APK) ----------
+// On garde la suite des écrans visités ; « retour » revient au précédent (une série en cours ou
+// terminée ramène à l'accueil). Sur l'accueil, appBack() répond false : l'appli se ferme.
+let navStack = [], lastView = "home", backNav = false;
+function trackNav(){
+  if (view === lastView) return;
+  if (!backNav && view !== "home") { navStack.push(lastView); if (navStack.length > 30) navStack.shift(); }
+  if (view === "home") navStack = [];
+  backNav = false; lastView = view;
+}
+window.appBack = function(){
+  if (view === "home") return false;
+  if (view === "table" && editIdx !== null) { editIdx = null; render(); return true; }
+  let to = "home";
+  if (view !== "play" && view !== "end") {
+    to = navStack.pop();
+    while (to === "play" || to === "end" || to === view) to = navStack.pop();
+    to = to || "home";
+  }
+  if (view === "play" || view === "end") S = null;
+  backNav = true; view = to; render(); window.scrollTo(0, 0);
+  return true;
+};
+
 function render(){
+  trackNav();
   document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === ((view==="list"||view==="table") ? view : "home")));
   document.querySelector(".wrap").classList.toggle("wide", view==="table");
   if (view==="home") $app.innerHTML = renderHome();
