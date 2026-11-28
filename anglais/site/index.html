@@ -574,7 +574,12 @@ function speakEl(url, t){
 // Versions des sons (audio/versions.json, écrit par le workflow) : un son refait change d'adresse,
 // donc le téléphone ne rejoue pas l'ancien.
 let AV = {};
-function loadAV(){ fetch("audio/versions.json").then(r => r.ok ? r.json() : {}).then(d => { if (d && Object.keys(d).length) AV = d; }).catch(() => {}); }
+const avListeners = [];   // appelés quand la liste des sons Ava est à jour
+function loadAV(){
+  return fetch("audio/versions.json").then(r => r.ok ? r.json() : {}).then(d => {
+    if (d && Object.keys(d).length) { AV = d; avListeners.forEach(f => { try { f(AV); } catch (e) {} }); }
+  }).catch(() => {});
+}
 loadAV();
 // Retour dans l'appli après plus de 10 minutes : on recharge la page (nouveaux mots, nouvelle version),
 // sauf pendant une série d'exercices ou une saisie.

@@ -3,7 +3,7 @@
 // Traduction et voix fournies par l'appli Android (objet AndroidApp).
 (function () {
   if (!window.AndroidApp) return;
-  const AJOUT_VERSION = "28/11 · 10";   // affichée en bas de « + Ajouter » : dit quelle version tourne
+  const AJOUT_VERSION = "28/11 · 11";   // affichée en bas de « + Ajouter » : dit quelle version tourne
 
   const AKEY = "vocab-added-v1";
   const key = s => String(s || "").toLowerCase().replace(/\s+/g, " ").trim();
@@ -55,6 +55,29 @@
     applyMine();
   }
 
+  // Dès qu'un mot ajouté ici a son son Ava sur GitHub (audio/versions.json), on efface le son fabriqué
+  // avec la voix du téléphone : l'appli joue alors la voix Ava.
+  function dropPhoneSounds(av) {
+    for (const a of added) {
+      const sl = audioSlug(a.en);
+      if (av[sl] && !a.ava) { a.ava = true; try { AndroidApp.dropLocal(sl); } catch (e) {} }
+    }
+    saveAdded();
+  }
+  avListeners.push(dropPhoneSounds);
+  if (Object.keys(AV).length) dropPhoneSounds(AV);
+  // Après l'envoi d'un mot sur GitHub : le son Ava arrive en 30 s à 1 min. On regarde toutes les 20 s
+  // pendant 4 minutes.
+  let watchT = null;
+  function watchAva() {
+    let n = 0; clearInterval(watchT);
+    watchT = setInterval(() => {
+      if (++n > 12 || !added.some(a => a.gh && !a.ava)) { clearInterval(watchT); return; }
+      loadAV();
+    }, 20000);
+  }
+  setTimeout(() => { if (added.some(a => a.gh && !a.ava)) watchAva(); }, 3000);
+
   // Voix du téléphone : si elle a changé (meilleure voix choisie), on refait les sons des mots ajoutés.
   const VKEY = "vocab-voice-v1";
   function voiceInfo() { try { return String(AndroidApp.voiceInfo() || ""); } catch (e) { return ""; } }
@@ -63,7 +86,7 @@
     if (!v) { if (tries > 0) setTimeout(() => resynthIfNeeded(tries - 1), 700); return; }
     let old = ""; try { old = localStorage.getItem(VKEY) || ""; } catch (e) {}
     if (old === v) return;
-    added.forEach(a => { try { AndroidApp.synth(a.en, audioSlug(a.en)); } catch (e) {} });
+    added.forEach(a => { if (!a.ava) try { AndroidApp.synth(a.en, audioSlug(a.en)); } catch (e) {} });
     try { localStorage.setItem(VKEY, v); } catch (e) {}
     if (view === "add") render();
   }
@@ -466,7 +489,7 @@
     const t = e.target.closest("button"); if (!t) return;
     if (t.dataset.alt !== undefined) { readForm(); F.fr = F.alts[+t.dataset.alt]; F.cands.forEach(c => { c.on = false; }); render(); return; }
     if (t.dataset.cand !== undefined) { readForm(); const c = F.cands[+t.dataset.cand]; c.on = !c.on; F.fr = buildFr(); render(); return; }
-    if (t.dataset.aListen !== undefined) { readForm(); if (F.en.trim()) AndroidApp.speak(F.en.trim()); return; }
+    if (t.dataset.aListen !== undefined) { readForm(); if (F.en.trim()) speak(F.en.trim()); return; }   // voix Ava si le mot en a une, sinon le téléphone
     if (t.dataset.aSave !== undefined) { save(); return; }
     if (t.dataset.aReplace !== undefined) { replace(); return; }
     if (t.dataset.gSync !== undefined) { sync(false); return; }
@@ -572,6 +595,7 @@
         } catch (e) { if (essai >= 2 || (e.status !== 409 && e.status !== 422)) throw e; }
       }
       res.done.forEach(a => { a.gh = true; }); saveAdded();
+      if (res.fresh) watchAva();
       res.changed.forEach(u => { u.gh = true; }); saveUpd();
       G.ok = true;
       G.msg = `Enregistré sur GitHub : ${res.done.concat(res.changed).map(a => a.en).join(", ")}.` + (res.done.length ? " La phrase d'exemple et la voix Ava arrivent d'ici quelques minutes." : "");
