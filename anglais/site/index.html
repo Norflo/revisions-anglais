@@ -133,7 +133,9 @@ h1 .flag{position:relative;display:inline-grid;place-items:center;width:42px;hei
 .hwords{margin-top:3px}
 .rpl{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
 .rpl .btn{width:100%;padding:9px 4px;font-size:.88rem;white-space:nowrap}
-.rpl .btn.ghost{color:#fff;border:0;box-shadow:0 6px 16px rgba(0,0,0,.10),inset 0 1px 0 rgba(255,255,255,.45)}
+/* Boutons colorés opaques : pas de flou d'arrière-plan ni de liseré (sinon le défilement saccade). */
+.rpl .btn.ghost{color:#fff;border:0;-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.45)}
+.rpl .btn.ghost::before{display:none}
 .rpl .btn.ghost[data-rmode="cards"]{background:var(--t-blue)}
 .rpl .btn.ghost[data-rmode="quiz"]{background:var(--t-pink)}
 .rpl .btn.ghost[data-rmode="write"]{background:var(--t-orange)}
@@ -687,6 +689,7 @@ function buildQueue(n){
 const HKEY = "vocab-history-v1";
 let HIST = [];
 try { HIST = JSON.parse(localStorage.getItem(HKEY)) || []; } catch (e) { HIST = []; }
+let histAll = false;   // « Revoir mes séries » : 10 séries affichées, les autres sur demande
 const MODE_NAME = { cards: "Cartes", quiz: "QCM", write: "Écrire", dict: "Dictée", ctx: "En contexte", due: "Mots à revoir" };
 function saveSeries(){
   if (!S || S.saved) return; S.saved = true;
@@ -726,14 +729,15 @@ function renderHist(){
     ${seen.length ? `<div class="small">${seen.length} mot${seen.length>1?"s":""} déjà travaillé${seen.length>1?"s":""} au moins une fois (60 au plus par série, tirés au hasard).</div>${replayBtns('data-rseen')}`
       : `<div class="small">Aucun mot travaillé pour l'instant : fais d'abord une série.</div>`}
     <div class="label">Mes séries passées</div>
-    ${HIST.length ? HIST.map((h, k) => {
+    ${HIST.length ? HIST.slice(0, histAll ? HIST.length : 10).map((h, k) => {
       const n = histIdx(h).length;
       return `<div class="hrow">
         <div class="hhead"><b>${esc(fmtDate(h.t))}</b><span class="small">${esc(MODE_NAME[h.mode] || h.mode)}${h.replay ? " · révision" : ""} · ${h.ok}/${h.tot}</span></div>
         <div class="small hwords">${h.en.slice(0, 8).map(esc).join(", ")}${h.en.length > 8 ? ` … (${h.en.length} mots)` : ""}</div>
         ${n ? replayBtns(`data-rhist="${k}"`) : `<div class="small">Ces mots ne sont plus dans ta liste.</div>`}
       </div>`;
-    }).join("") : `<div class="empty">Tes séries apparaîtront ici dès que tu en auras terminé une.</div>`}
+    }).join("") + (!histAll && HIST.length > 10 ? `<button class="btn ghost" data-histall style="margin-top:10px">Afficher les ${HIST.length - 10} séries plus anciennes</button>` : "")
+      : `<div class="empty">Tes séries apparaîtront ici dès que tu en auras terminé une.</div>`}
   </section>`;
 }
 
@@ -1056,7 +1060,8 @@ $app.addEventListener("click", e => {
   if (t.dataset.dir) { settings.dir = t.dataset.dir; saveSettings(); render(); return; }
   if (t.dataset.size) { settings.size = +t.dataset.size; saveSettings(); render(); return; }
   if (t.dataset.start) { start(t.dataset.start); window.scrollTo(0,0); return; }
-  if (t.dataset.hist !== undefined) { view = "hist"; render(); window.scrollTo(0,0); return; }
+  if (t.dataset.hist !== undefined) { view = "hist"; histAll = false; render(); window.scrollTo(0,0); return; }
+  if (t.dataset.histall !== undefined) { histAll = true; render(); return; }
   if (t.dataset.rmode) {
     if (t.dataset.rseen !== undefined) return startList(seenIdx(), t.dataset.rmode);
     const h = HIST[+t.dataset.rhist]; if (h) return startList(histIdx(h), t.dataset.rmode);
