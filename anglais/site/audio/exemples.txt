@@ -78,6 +78,7 @@ ex-postpone	The match was postponed because of the rain.
 ex-prior	No prior experience is required.
 ex-pull-off	It was risky, but they pulled off the plan.
 ex-pull-over	The police officer told me to pull over.
+ex-pull-up	He pulled up the weeds and threw them away.
 ex-quell	The government tried to quell the protests.
 ex-quote	Can you give me a quote for the repairs?
 ex-reach-out	Feel free to reach out if you have any questions.
