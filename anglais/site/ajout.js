@@ -3,7 +3,7 @@
 // Traduction et voix fournies par l'appli Android (objet AndroidApp).
 (function () {
   if (!window.AndroidApp) return;
-  const AJOUT_VERSION = "24/11 · 6";   // affichée en bas de « + Ajouter » : dit quelle version tourne
+  const AJOUT_VERSION = "28/11 · 7";   // affichée en bas de « + Ajouter » : dit quelle version tourne
 
   const AKEY = "vocab-added-v1";
   const key = s => String(s || "").toLowerCase().replace(/\s+/g, " ").trim();
@@ -94,6 +94,11 @@
     .addmsg.ok{color:var(--good)} .addmsg.ko{color:var(--bad)}
     .two{display:flex;gap:8px} .two .btn{flex:1}
     .loc{display:inline-block;font-size:.72rem;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:1px 8px;margin-left:6px;vertical-align:middle}
+    .posgrp{margin:6px 0 10px}
+    .posgrp .sense{margin:4px 0 0 2px;padding-left:10px;border-left:2px solid var(--line)}
+    .posgrp .gl{font-size:.8rem;color:var(--muted);font-style:italic;margin-top:4px}
+    .posgrp .via{font-style:normal}
+    .posgrp .sugg{margin:4px 0 2px}
     .dupbox{margin:4px 0 8px;padding:10px 14px;border-radius:16px;background:var(--accent-soft)}
     .dupbox .fr{margin-top:2px}
     .del{border:0;background:none;color:var(--muted);font-size:1.1rem;padding:4px 8px}
@@ -110,8 +115,15 @@
         <input type="text" id="a-en" value="${esc(F.en)}" placeholder="ex. : take for granted" autocapitalize="off" spellcheck="false">
         <button class="btn main" type="submit" ${F.busy ? "disabled" : ""}>${F.busy ? "Traduction…" : "Traduire"}</button>
       </form>
-      ${F.cands.length ? `<div class="label">Sens par nature (touche pour ajouter ou retirer)</div>
-        ${POS_ORDER.filter(p => F.cands.some(c => c.tag === p)).map(p => `<div class="sugg"><span class="pos ${POS[p][1]}" style="align-self:center">${POS[p][0]}</span>${F.cands.map((c, k) => c.tag === p ? `<button data-cand="${k}" class="${c.on ? "on" : ""}">${esc(c.w)}</button>` : "").join("")}</div>`).join("")}
+      ${F.cands.length ? `<div class="label">Sens par nature : touche ceux que tu veux garder</div>
+        ${POS_ORDER.filter(p => F.cands.some(c => c.tag === p)).map(p => {
+          const sis = [...new Set(F.cands.filter(c => c.tag === p).map(c => c.si))];
+          return `<div class="posgrp"><span class="pos ${POS[p][1]}">${POS[p][0]}</span>${sis.map(si => {
+            const cs = F.cands.map((c, k) => [c, k]).filter(([c]) => c.tag === p && c.si === si);
+            const c0 = cs[0][0];
+            return `<div class="sense">${c0.gloss ? `<div class="gl">${esc(c0.gloss)}${c0.via ? ` <span class="via">(comme « ${esc(c0.via)} »)</span>` : ""}</div>` : ""}<div class="sugg">${cs.map(([c, k]) => `<button data-cand="${k}" class="${c.on ? "on" : ""}">${esc(c.w)}</button>`).join("")}</div></div>`;
+          }).join("")}</div>`;
+        }).join("")}
         ${F.alts.length ? `<div class="label">Autre traduction (sans nature)</div><div class="sugg">${F.alts.map((a, k) => `<button data-alt="${k}" class="${key(a) === key(F.fr) ? "on" : ""}">${frHtml(a)}</button>`).join("")}</div>` : ""}`
       : F.alts.length ? `<div class="label">Propositions (touche pour choisir)</div>
         <div class="sugg">${F.alts.map((a, k) => `<button data-alt="${k}" class="${key(a) === key(F.fr) ? "on" : ""}">${frHtml(a)}</button>`).join("")}</div>` : ""}
@@ -171,6 +183,7 @@
     if (id !== reqId) return;
     F.busy = false;
     let r = null; try { r = JSON.parse(json); } catch (e) {}
+    if (r && r.alts) r.alts = r.alts.filter(a => !/MYMEMORY WARNING|QUERY LENGTH LIMIT/i.test(a));
     if (!r || !r.alts || !r.alts.length) {
       F.msg = "Pas de traduction trouvée (Internet ?). Tu peux l'écrire toi-même."; F.ok = false;
     } else {
@@ -196,37 +209,53 @@
   async function mm(q) {
     const r = await fetchT("https://api.mymemory.translated.net/get?langpair=en%7Cfr&q=" + encodeURIComponent(q));
     const j = await r.json();
-    return String((j.responseData && j.responseData.translatedText) || "");
+    const t = String((j.responseData && j.responseData.translatedText) || "");
+    return mmBad(t) ? "" : t;
   }
   // ---------- Wiktionary (en.wiktionary.org) ----------
-  // Chaque article anglais a, pour chaque nature (Noun, Verb…), un tableau de traductions :
+  // Chaque article anglais a, pour chaque nature (Noun, Verb…), un tableau de traductions par sens :
+  //   {{trans-top|early version of a written work}}
   //   * French: {{t+|fr|brouillon|m}}, {{t+|fr|ébauche|f}}
-  // On garde les mots français de chaque nature, dans l'ordre des sens (le plus courant d'abord).
+  // Les sens ne sont PAS rangés du plus courant au moins courant (draft : « courant d'air » avant
+  // « brouillon ») : on montre chaque sens avec sa définition anglaise, et on présélectionne celui que
+  // MyMemory confirme. Sens sans traduction mais renvoyé vers un synonyme ({{trans-top-see|…|arrange}},
+  // cas de « lay out ») : on prend les traductions du synonyme.
   const WK_POS = { "Noun": "n.", "Verb": "v.", "Adjective": "adj.", "Adverb": "adv.", "Preposition": "prép.",
     "Conjunction": "conj.", "Interjection": "interj.", "Phrase": "expr.", "Idiom": "expr.", "Proverb": "expr.",
-    "Prepositional phrase": "expr.", "Proper noun": "n." };
-  const POS_ORDER = ["n.", "v.", "adj.", "adv.", "prép.", "conj.", "interj.", "expr."];
+    "Prepositional phrase": "expr.", "Proper noun": "n.", "Pronoun": "pron.", "Determiner": "dét.", "Numeral": "num.", "Article": "art." };
+  const POS_ORDER = ["n.", "v.", "adj.", "adv.", "prép.", "conj.", "pron.", "dét.", "art.", "num.", "interj.", "expr."];
+  const wkClean = t => String(t || "").replace(/\[\[(?:[^\]|]*\|)?([^\]]*)\]\]/g, "$1").replace(/'{2,}/g, "").trim();
+  const params = s => s.split("|").map(x => x.trim()).filter(x => x && !/^[a-z]+\d*=/.test(x));
 
+  // out[nature] = [{ gloss, words }] (un élément par sens) ; see[nature] = [{ gloss, targets }]
   function wkParse(text) {
     const eng = text.match(/(^|\n)==\s*English\s*==\s*\n([\s\S]*?)(?=\n==[^=]|$)/);
     const body = eng ? eng[2] : text;          // la page « …/translations » n'a pas de section English
-    const out = {}, subpage = [];
-    let pos = null;
+    const out = {}, see = {}, subpage = [];
+    let pos = null, gloss = "";
     for (const line of body.split("\n")) {
       const h = line.match(/^=+\s*([A-Za-z ]+?)\s*=+\s*$/);
       if (h) { if (WK_POS[h[1]]) pos = WK_POS[h[1]]; continue; }
       if (!pos) continue;
       if (/\{\{see translation subpage/i.test(line)) { if (!subpage.includes(pos)) subpage.push(pos); continue; }
-      if (!/^\*:?\s*French\s*:/.test(line)) continue;
-      const re = /\{\{t[t+]*(?:-check|\+check)?\|fr\|([^|}]+)/g; let m;
-      while ((m = re.exec(line))) {
-        const w = m[1].replace(/\[\[(?:[^\]|]*\|)?([^\]]*)\]\]/g, "$1").trim();
-        if (!w) continue;
-        (out[pos] = out[pos] || []);
-        if (!out[pos].some(x => key(x) === key(w))) out[pos].push(w);
+      let m = line.match(/\{\{trans-top(-see)?\|([^}]*)\}\}/);
+      if (m) {
+        const ps = params(m[2]); gloss = wkClean(ps[0]);
+        if (m[1]) (see[pos] = see[pos] || []).push({ gloss, targets: ps.slice(1) });
+        continue;
       }
+      m = line.match(/\{\{trans-see\|([^}]*)\}\}/);
+      if (m) { const ps = params(m[1]); (see[pos] = see[pos] || []).push({ gloss: wkClean(ps[0]), targets: ps.length > 1 ? ps.slice(1) : [ps[0]] }); continue; }
+      if (!/^\*:?\s*French\s*:/.test(line)) continue;
+      const re = /\{\{t[t+]*(?:-check|\+check)?\|fr\|([^}]*)\}\}/g; const words = [];
+      while ((m = re.exec(line))) {
+        const parts = m[1].split("|"); const alt = parts.find(x => /^alt=/.test(x));
+        const w = wkClean(alt ? alt.slice(4) : parts[0]);
+        if (w && !words.some(x => key(x) === key(w))) words.push(w);
+      }
+      if (words.length) (out[pos] = out[pos] || []).push({ gloss, words });
     }
-    return { out, subpage };
+    return { out, see, subpage };
   }
   // fetch avec limite de temps : sans réponse au bout de 7 s, on passe à la suite.
   function fetchT(u, ms) {
@@ -235,7 +264,9 @@
   }
   async function wkFetch(title) {
     const u = "https://en.wiktionary.org/w/api.php?action=parse&format=json&formatversion=2&prop=wikitext&redirects=1&origin=*&page=" + encodeURIComponent(title);
-    const r = await fetchT(u); if (!r.ok) return null;
+    const r = await fetchT(u);
+    if (r.status === 429) throw new Error("Wiktionary demande d'attendre un peu (trop de demandes)");
+    if (!r.ok) return null;
     const j = await r.json();
     return j && j.parse && typeof j.parse.wikitext === "string" ? j.parse.wikitext : null;
   }
@@ -249,24 +280,51 @@
       try { txt = await wkFetch(t); reached = true; } catch (e) { F.wk = "Wiktionary injoignable (" + (e && e.name === "AbortError" ? "pas de réponse en 7 s" : (e && e.message || "erreur")) + ")."; break; }
       if (!txt || !/==\s*English\s*==/.test(txt)) continue;
       found = true;
-      const { out, subpage } = wkParse(txt);
+      const { out, see, subpage } = wkParse(txt);
       if (subpage.length) {
         let sub = null; try { sub = await wkFetch(t + "/translations"); } catch (e) {}
-        if (sub) { const r2 = wkParse(sub).out; for (const k in r2) { out[k] = (out[k] || []).concat(r2[k].filter(w => !(out[k] || []).some(x => key(x) === key(w)))); } }
+        if (sub) { const r2 = wkParse(sub); for (const k in r2.out) out[k] = (out[k] || []).concat(r2.out[k]); for (const k in r2.see) see[k] = (see[k] || []).concat(r2.see[k]); }
       }
-      const groups = POS_ORDER.filter(p => out[p] && out[p].length).map(p => ({ tag: p, words: out[p].slice(0, 6) }));
-      if (groups.length) { F.wk = "Sens trouvés sur Wiktionary."; return groups; }
+      // Nature sans aucune traduction directe : on suit les renvois vers des synonymes (2 au plus).
+      let hops = 0;
+      for (const p of POS_ORDER) {
+        if (out[p] && out[p].length) continue;
+        for (const sv of see[p] || []) {
+          if (hops >= 2) break;
+          const tg = sv.targets[0]; if (!tg) continue;
+          hops++;
+          let t2 = null; try { t2 = await wkFetch(tg); } catch (e) {}
+          if (!t2) continue;
+          const o2 = wkParse(t2).out[p] || [];
+          const pick = o2.find(x => key(x.gloss) === key(sv.gloss)) || o2[0];
+          if (pick) (out[p] = out[p] || []).push({ gloss: sv.gloss, via: tg, words: pick.words });
+        }
+      }
+      const groups = POS_ORDER.filter(p => out[p] && out[p].length)
+        .map(p => ({ tag: p, senses: out[p].slice(0, 6).map(x => ({ gloss: x.gloss, via: x.via || "", words: x.words.slice(0, 4) })) }));
+      if (groups.length) { F.wk = "Sens trouvés sur Wiktionary (définitions en anglais)."; return groups; }
     }
     if (reached) F.wk = found ? `Wiktionary connaît « ${base} » mais ne donne pas de traduction française.`
                               : `« ${base} » n'est pas dans Wiktionary.`;
     return null;
   }
 
-  // Propositions par nature : chaque mot français est un bouton (touche pour l'ajouter ou le retirer) ;
-  // la case « Traduction » se construit toute seule : « n. brouillon, ébauche ; v. rédiger ».
+  // MyMemory renvoie un message d'avertissement (en majuscules) à la place de la traduction quand son
+  // quota du jour est épuisé : on l'écarte.
+  const mmBad = t => /MYMEMORY WARNING|QUERY LENGTH LIMIT|INVALID LANGUAGE|PLEASE SELECT/i.test(t);
+
+  // Propositions par nature et par sens : chaque mot français est un bouton (touche pour l'ajouter ou le
+  // retirer) ; la case « Traduction » se construit toute seule : « n. brouillon, ébauche ; v. rédiger ».
+  // Rien n'est coché d'avance quand il y a plusieurs sens (l'ordre de Wiktionary n'est pas celui de
+  // l'usage) ; quand le mot n'a qu'un seul sens en tout, il est coché d'avance.
   function setCands(groups) {
     F.cands = [];
-    groups.forEach(g => g.words.forEach((w, k) => F.cands.push({ tag: g.tag, w, on: k < 2 })));
+    const only = groups.reduce((n, g) => n + g.senses.length, 0) === 1;   // un seul sens en tout
+    for (const g of groups) {
+      const flat = [];
+      g.senses.forEach((sv, si) => sv.words.forEach((w, k) => flat.push({ tag: g.tag, si, gloss: sv.gloss, via: sv.via, w, on: only && k === 0 })));
+      F.cands.push(...flat);
+    }
     F.fr = buildFr();
   }
   function buildFr() {
