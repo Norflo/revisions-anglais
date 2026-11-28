@@ -133,6 +133,12 @@ h1 .flag{position:relative;display:inline-grid;place-items:center;width:42px;hei
 .hwords{margin-top:3px}
 .rpl{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
 .rpl .btn{width:100%;padding:9px 4px;font-size:.88rem;white-space:nowrap}
+.rpl .btn.ghost{color:#fff;border:0;box-shadow:0 6px 16px rgba(0,0,0,.10),inset 0 1px 0 rgba(255,255,255,.45)}
+.rpl .btn.ghost[data-rmode="cards"]{background:var(--t-blue)}
+.rpl .btn.ghost[data-rmode="quiz"]{background:var(--t-pink)}
+.rpl .btn.ghost[data-rmode="write"]{background:var(--t-orange)}
+.rpl .btn.ghost[data-rmode="dict"]{background:linear-gradient(135deg,rgba(0,163,180,.86),rgba(48,209,88,.74))}
+.rpl .btn.ghost[data-rmode="ctx"]{background:var(--t-green)}
 
 /* Contrôles segmentés */
 .seg{display:flex;gap:2px;background:var(--track);border-radius:999px;padding:3px}
