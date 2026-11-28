@@ -3,7 +3,7 @@
 // Traduction et voix fournies par l'appli Android (objet AndroidApp).
 (function () {
   if (!window.AndroidApp) return;
-  const AJOUT_VERSION = "28/11 · 20";   // affichée en bas de « + Ajouter » : dit quelle version tourne
+  const AJOUT_VERSION = "28/11 · 21";   // affichée en bas de « + Ajouter » : dit quelle version tourne
 
   const AKEY = "vocab-added-v1";
   const key = s => String(s || "").toLowerCase().replace(/\s+/g, " ").trim();
@@ -138,7 +138,7 @@
         <input type="text" id="a-en" value="${esc(F.en)}" placeholder="ex. : take for granted" autocapitalize="off" spellcheck="false">
         <button class="btn main" type="submit" ${F.busy ? "disabled" : ""}>${F.busy ? "Traduction…" : "Traduire"}</button>
       </form>
-      ${F.cands.length ? `<div class="label">Sens par nature : touche ceux que tu veux garder</div>
+      ${F.cands.length ? `<div class="label">Sens par nature : touche pour ajouter ou retirer</div>
         ${POS_ORDER.filter(p => F.cands.some(c => c.tag === p)).map(p => {
           const sis = [...new Set(F.cands.filter(c => c.tag === p).map(c => c.si))];
           return `<div class="posgrp"><span class="pos ${POS[p][1]}">${POS[p][0]}</span>${sis.map(si => {
@@ -354,18 +354,31 @@
     F.fr = buildFr();
     autoPick();
   }
-  // Pour que la case « Traduction » ne soit jamais vide : on coche le sens qui correspond à la
-  // traduction générale (MyMemory), sinon le premier mot proposé. Seulement si rien n'est coché.
+  // Tous les sens cochés d'avance : un mot par sens (le premier proposé). Le mot qui correspond à la
+  // traduction générale (MyMemory) est coché à la place et passe en tête de sa nature.
+  // Seulement si rien n'est coché ; on retire ensuite ce qu'on ne veut pas.
   const plainFr = t => key(t).replace(/[.!?]+$/, "").replace(/^(le |la |les |l'|l’|un |une |des |du |de |d'|d’|se |s')/, "").trim();
   function autoPick() {
     if (!F.cands.length || F.cands.some(c => c.on)) return;
     const alts = F.alts.filter(a => !POS_RE.test(a)).map(plainFr);
-    const c = F.cands.find(x => alts.includes(plainFr(x.w))) || F.cands[0];
-    c.on = true; F.auto = true; F.fr = buildFr();
+    const hit = F.cands.find(x => alts.includes(plainFr(x.w)));
+    const done = new Set(), used = new Set();   // sens déjà servis ; mots déjà pris (par nature)
+    if (hit) { hit.on = true; done.add(hit.tag + "|" + hit.si); used.add(hit.tag + "|" + key(hit.w)); }
+    for (const c of F.cands) {
+      const sk = c.tag + "|" + c.si;
+      if (done.has(sk)) continue;
+      // le premier mot de ce sens qui n'est pas déjà pris par un autre sens
+      const pick = F.cands.find(x => x.tag === c.tag && x.si === c.si && !used.has(x.tag + "|" + key(x.w)));
+      done.add(sk);
+      if (pick) { pick.on = true; used.add(pick.tag + "|" + key(pick.w)); }
+    }
+    F.lead = hit || null; F.auto = true; F.fr = buildFr();
   }
   function buildFr() {
     return POS_ORDER.map(p => {
-      const ws = F.cands.filter(c => c.on && c.tag === p).map(c => c.w);
+      const on = F.cands.filter(c => c.on && c.tag === p);
+      if (F.lead && F.lead.on && F.lead.tag === p) on.sort((a, b) => (b === F.lead) - (a === F.lead));
+      const ws = [...new Map(on.map(c => [key(c.w), c.w])).values()];   // un mot une seule fois
       return ws.length ? p + " " + ws.join(", ") : "";
     }).filter(Boolean).join(" ; ");
   }
@@ -429,7 +442,7 @@
     readForm();
     const en = F.en.trim();
     if (!en) return;
-    F.busy = true; F.alts = []; F.cands = []; F.auto = false; F.wk = "Recherche des sens par nature sur Wiktionary…"; F.msg = ""; reqId++;
+    F.busy = true; F.alts = []; F.cands = []; F.auto = false; F.lead = null; F.wk = "Recherche des sens par nature sur Wiktionary…"; F.msg = ""; reqId++;
     F.dup = W.find(w => key(w.en) === key(en)) || null;
     render();
     try { AndroidApp.translate(reqId, en); } catch (e) { F.busy = false; render(); }
