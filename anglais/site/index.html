@@ -118,6 +118,12 @@ h1 .flag{position:relative;display:inline-grid;place-items:center;width:42px;hei
 .mode b{display:block;font-family:var(--font-d);font-weight:700;font-size:1.2rem;line-height:1.2;letter-spacing:-.02em}
 .mode span{font-size:.88rem;opacity:.95}
 .m-cards{background:var(--t-blue)} .m-quiz{background:var(--t-pink)} .m-write{background:var(--t-orange)}
+.m-hist{background:linear-gradient(135deg,rgba(94,92,230,.84),rgba(175,82,222,.74))}
+.hrow{padding:12px 0;border-top:1px solid var(--line)}
+.hhead{display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap}
+.hwords{margin-top:3px}
+.rpl{display:flex;gap:8px;margin-top:8px}
+.rpl .btn{flex:1;padding:9px 6px;font-size:.9rem}
 
 /* Contrôles segmentés */
 .seg{display:flex;gap:2px;background:var(--track);border-radius:999px;padding:3px}
@@ -596,6 +602,7 @@ function speak(t){
   }).catch(() => { if (token === speakToken) speakEl(url, t); });
 }
 const ICON = {
+  hist:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4h4"/><path d="M12 7v5l3 2"/></svg>',
   speak:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg>',
   cards:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="14" height="14" rx="2"/><path d="M7 3h12a2 2 0 0 1 2 2v12"/></svg>',
   quiz:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="6" r="1.5"/><circle cx="5" cy="12" r="1.5"/><circle cx="5" cy="18" r="1.5"/><path d="M10 6h10M10 12h10M10 18h10"/></svg>',
@@ -631,6 +638,59 @@ function buildQueue(n){
   return shuffle(pick.map(x => x.i));
 }
 
+// ---------- Historique des séries (exercice « Revoir mes séries ») ----------
+// Chaque série terminée est gardée : date, exercice, score et mots, pour pouvoir la rejouer.
+const HKEY = "vocab-history-v1";
+let HIST = [];
+try { HIST = JSON.parse(localStorage.getItem(HKEY)) || []; } catch (e) { HIST = []; }
+const MODE_NAME = { cards: "Cartes", quiz: "QCM", write: "Écrire", ctx: "En contexte", due: "Mots à revoir" };
+function saveSeries(){
+  if (!S || S.saved) return; S.saved = true;
+  const en = [...new Set(S.queue.slice(0, S.total).map(i => W[i] && W[i].en).filter(Boolean))];
+  if (!en.length) return;
+  HIST.unshift({ t: Date.now(), mode: S.mode, en, ok: S.right.length, tot: S.graded.size, replay: !!S.replay });
+  HIST = HIST.slice(0, 40);
+  try { localStorage.setItem(HKEY, JSON.stringify(HIST)); } catch (e) {}
+}
+// Lance un exercice sur une liste de mots donnée (indices dans W).
+function startList(idx, mode){
+  const q = shuffle(idx.slice()).slice(0, 60);
+  if (!q.length) return;
+  S = { mode, dir: mode==="write" ? "fr" : settings.dir, queue: q, pos: 0, total: q.length, replay: true,
+        graded: new Set(), right: [], wrong: [], answered: false, choice: null, typed: "", okTyped: null, opts: null };
+  view = "play"; render(); window.scrollTo(0, 0);
+}
+const seenIdx = () => W.filter(w => rec(w).b > 0).map(w => w.i);
+const histIdx = h => { const m = new Map(W.map(w => [norm(w.en), w.i])); return h.en.map(e => m.get(norm(e))).filter(i => i !== undefined); };
+function fmtDate(t){
+  const d = new Date(t), now = new Date();
+  const day = d.toDateString() === now.toDateString() ? "Aujourd'hui"
+    : d.toDateString() === new Date(now - DAY).toDateString() ? "Hier"
+    : d.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
+  return day + ", " + d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+}
+function replayBtns(attr){
+  return `<div class="rpl"><button class="btn ghost sm" ${attr} data-rmode="cards">Cartes</button><button class="btn ghost sm" ${attr} data-rmode="quiz">QCM</button><button class="btn ghost sm" ${attr} data-rmode="write">Écrire</button></div>`;
+}
+function renderHist(){
+  const seen = seenIdx();
+  return `<section class="panel">
+    <button class="btn ghost sm" data-home style="margin-bottom:12px">← Accueil</button>
+    <div class="label" style="margin-top:0">Tous les mots déjà vus</div>
+    ${seen.length ? `<div class="small">${seen.length} mot${seen.length>1?"s":""} déjà travaillé${seen.length>1?"s":""} au moins une fois (60 au plus par série, tirés au hasard).</div>${replayBtns('data-rseen')}`
+      : `<div class="small">Aucun mot travaillé pour l'instant : fais d'abord une série.</div>`}
+    <div class="label">Mes séries passées</div>
+    ${HIST.length ? HIST.map((h, k) => {
+      const n = histIdx(h).length;
+      return `<div class="hrow">
+        <div class="hhead"><b>${esc(fmtDate(h.t))}</b><span class="small">${esc(MODE_NAME[h.mode] || h.mode)}${h.replay ? " · révision" : ""} · ${h.ok}/${h.tot}</span></div>
+        <div class="small hwords">${h.en.slice(0, 8).map(esc).join(", ")}${h.en.length > 8 ? ` … (${h.en.length} mots)` : ""}</div>
+        ${n ? replayBtns(`data-rhist="${k}"`) : `<div class="small">Ces mots ne sont plus dans ta liste.</div>`}
+      </div>`;
+    }).join("") : `<div class="empty">Tes séries apparaîtront ici dès que tu en auras terminé une.</div>`}
+  </section>`;
+}
+
 function start(mode){
   const q = buildQueue(settings.size);
   S = { mode, dir: mode==="write" ? "fr" : settings.dir, queue: q, pos: 0, total: q.length,
@@ -653,7 +713,7 @@ function answer(ok){
 
 function next(){
   S.pos++; S.answered = false; S.choice = null; S.typed = ""; S.okTyped = null; S.opts = null;
-  if (S.pos >= S.queue.length) { view = "end"; }
+  if (S.pos >= S.queue.length) { view = "end"; saveSeries(); }
   render();
 }
 
@@ -725,6 +785,7 @@ function renderHome(){
     <button class="mode m-cards" data-start="cards"><span class="ic">${ICON.cards}</span><span><b>Cartes</b><span>Tu essaies de te souvenir, puis tu retournes la carte.</span></span></button>
     <button class="mode m-quiz" data-start="quiz"><span class="ic">${ICON.quiz}</span><span><b>QCM</b><span>Choisis la bonne traduction parmi 4.</span></span></button>
     <button class="mode m-write" data-start="write"><span class="ic">${ICON.write}</span><span><b>Écrire</b><span>On te donne le français, tu tapes le mot anglais.</span></span></button>
+    <button class="mode m-hist" data-hist><span class="ic">${ICON.hist}</span><span><b>Revoir mes séries</b><span>Rejoue une série passée, ou tous les mots déjà vus.</span></span></button>
   </div>`;
 }
 
@@ -798,7 +859,7 @@ function renderEnd(){
     <p style="margin:8px 0 0" class="small">${r===t ? "Sans faute, bravo !" : "Les mots ratés reviendront plus souvent."}</p>
     ${wrongWords.length ? `<div class="label">À retravailler</div><ul class="endlist">${wrongWords.map(w=>`<li><b class="say" data-speak="${esc(w.en)}">${esc(w.en)}</b> : ${frHtml(w.fr)}</li>`).join("")}</ul>` : ""}
     <div style="display:grid;gap:10px;margin-top:18px">
-      <button class="btn main" data-start="${S.mode}">Nouvelle série</button>
+      ${S.replay ? `<button class="btn main" data-hist>Revoir mes séries</button>` : `<button class="btn main" data-start="${S.mode}">Nouvelle série</button>`}
       <button class="btn ghost" data-home>Retour à l'accueil</button>
     </div>
   </section>`;
@@ -906,6 +967,7 @@ function render(){
   else if (view==="end") $app.innerHTML = renderEnd();
   else if (view==="list") $app.innerHTML = renderList();
   else if (view==="table") $app.innerHTML = renderTable();
+  else if (view==="hist") $app.innerHTML = renderHist();
   if (view==="play" && S.mode==="write" && !S.answered){
     const inp = document.getElementById("winput");
     if (inp) setTimeout(() => { try { inp.focus(); } catch(e){} }, 30);
@@ -933,6 +995,12 @@ $app.addEventListener("click", e => {
   if (t.dataset.dir) { settings.dir = t.dataset.dir; saveSettings(); render(); return; }
   if (t.dataset.size) { settings.size = +t.dataset.size; saveSettings(); render(); return; }
   if (t.dataset.start) { start(t.dataset.start); window.scrollTo(0,0); return; }
+  if (t.dataset.hist !== undefined) { view = "hist"; render(); window.scrollTo(0,0); return; }
+  if (t.dataset.rmode) {
+    if (t.dataset.rseen !== undefined) return startList(seenIdx(), t.dataset.rmode);
+    const h = HIST[+t.dataset.rhist]; if (h) return startList(histIdx(h), t.dataset.rmode);
+    return;
+  }
   if (t.dataset.quit !== undefined || t.dataset.home !== undefined) { S = null; view = "home"; render(); return; }
   if (t.dataset.flip !== undefined) { S.answered = true; render(); return; }
   if (t.dataset.grade !== undefined) { answer(t.dataset.grade==="1"); next(); return; }
